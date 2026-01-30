@@ -13,7 +13,7 @@ mssql-django = "*"
 [dev-packages]
 
 [requires]
-python_version = "3.10"
+python_version = "3.13"
 
 [scripts]
 r = "python manage.py runserver"

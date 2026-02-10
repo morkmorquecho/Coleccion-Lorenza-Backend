@@ -9,18 +9,20 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+from datetime import timedelta
 import os
+import sys
 from decouple import config
 
 from pathlib import Path
 
-#========================================== CARPETAS RELEVANTES ==========================================
-BASE_DIR = Path(__file__).resolve().parent.parent
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-STATIC_URL = 'static/'
+import sentry_sdk
 
+import warnings
+#IGNORAR WARNINGS INNUTILES
+warnings.filterwarnings('ignore', module='dj_rest_auth.registration.serializers')
 
+DEBUG = config('DEBUG')
 #========================================== APPS INSTALADAS ==========================================
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -29,6 +31,24 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
+    'corsheaders',
+    "drf_spectacular",
+    
+    # REST Framework
+    'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
+    'rest_framework.authtoken',
+    
+    # Authentication
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
+    
+    # Allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',  
     
     #App del proyecto
     'users',
@@ -40,8 +60,240 @@ INSTALLED_APPS = [
     
 ]
 
+
+#================================================= CONFIG DATABSE =================================================
+#Autenticacion por Windows (comun en sql server)
+DATABASES = {
+    'default': {
+        'ENGINE': config('ENGINE_DB'),
+        'NAME': config('NAME_DB'),      
+        'HOST': config('HOST_DB'),
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'trusted_connection': 'yes',
+        },
+    }
+}
+
+#Autenticacion usual
+# DATABASES = {
+#     'default': {
+#         'ENGINE': config('DB_ENGINE'),
+#         'NAME': config('DB_NAME'),
+#         'USER': config('DB_USER'),
+#         'PASSWORD': config('DB_PASSWORD'),
+#         'HOST': config('DB_HOST'),
+#         'PORT': config('DB_PORT', cast=int),
+#     }
+# }
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
+    }
+
+
+#================================================= PASSWORD VALIDATORS =================================================
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+
+#================================================ JWT ==========================================================
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': config('SECRET_KEY'),
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+
+     'TOKEN_OBTAIN_SERIALIZER': 'rest_framework_simplejwt.serializers.TokenObtainPairSerializer',
+    'TOKEN_REFRESH_SERIALIZER': 'rest_framework_simplejwt.serializers.TokenRefreshSerializer',
+}
+
+
+#================================================ REST AUTH ==========================================================
+SITE_ID = 1
+
+REST_AUTH = {
+    'USE_JWT': True,
+    'JWT_AUTH_RETURN_EXPIRATION': True,
+    'REGISTER_SERIALIZER': 'users.serializers.CustomRegisterSerializer', 
+    'TOKEN_MODEL': None,  
+}
+
+
+# =============================================== ALL AUTH  ========================================
+ACCOUNT_LOGIN_METHODS = ["email"]
+
+ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'password2*']
+
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_PREVENT_ENUMERATION = True
+
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = '/login/'
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+
+#=============================================== SOCIALACCOUNT_PROVIDERS DE ALLAUTH ===============================================
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'APP': {
+            'client_id': config('ID_GOOGLE_CLIENT'),
+            'secret': config('SECRET_GOOGLE_CLIENT'),
+            'key': ''
+        }
+    },
+}
+
+
+#================================================ AUTH BACKEND =====================================================
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+
+#================================================ REST_FRAMEWORK ======================================================
+if config('ACTIVE_RATES', default=False, cast=bool):
+    DEFAULT_THROTTLE_CLASSES = (
+            'rest_framework.throttling.AnonRateThrottle',
+            'rest_framework.throttling.UserRateThrottle',
+            'config.throttling.BurstRateThrottle',
+    )
+    DEFAULT_THROTTLE_RATES = {
+            'anon': '35/hour',
+            'user': '500/hour',
+            'login': '5/hour',
+            'register': '3/hour',
+            'sensitive': '5/hour',
+            'heavy': '20/hour',
+            'burst': '30/min',
+    }
+else:
+    DEFAULT_THROTTLE_CLASSES = (
+            'rest_framework.throttling.AnonRateThrottle',
+            'rest_framework.throttling.UserRateThrottle',
+            'config.throttling.BurstRateThrottle',
+    )
+    DEFAULT_THROTTLE_RATES = {
+            'anon': '9935/hour',
+            'user': '99500/hour',
+            'login': '995/hour',
+            'register': '993/hour',
+            'sensitive': '995/hour',
+            'heavy': '9920/hour',
+            'burst': '9930/min',
+    }
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+
+    'DEFAULT_THROTTLE_CLASSES': DEFAULT_THROTTLE_CLASSES,
+    'DEFAULT_THROTTLE_RATES': DEFAULT_THROTTLE_RATES,
+
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': config('PAGINATION_LIMIT'),
+
+    'DEFAULT_RENDERER_CLASSES': [
+        'config.renderers.StandardJSONRenderer',
+    ],
+
+    'EXCEPTION_HANDLER': 'core.utils.exceptions.custom_exception_handler',
+}
+
+
+#================================================ EMAIL CONFIG ==========================================================
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+
+# ================================================ CORS CONFIGURATION ================================================
+# URLs permitidas (tu frontend)
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:3000,http://localhost:5173",  # React/Vite por defecto
+    cast=lambda v: [s.strip() for s in v.split(",") if s]
+)
+
+# Permitir envío de cookies cross-origin
+CORS_ALLOW_CREDENTIALS = True 
+
+# Headers permitidos
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+#========================================== CARPETAS RELEVANTES ==========================================
+BASE_DIR = Path(__file__).resolve().parent.parent
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+
+
 #================================================= MIDDLEWARE ====================================================
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -49,11 +301,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',  
 ]
 
 
 #================================================= DIRECCION DE LOS TEMPLATES(EN ESTE CASO SOLO LOS DE EMAILS) =================================================
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -73,61 +325,156 @@ TEMPLATES = [
 ]
 
 
-#================================================= CONFIG DATABSE =================================================
-DATABASES = {
-    'default': {
-        'ENGINE': config('ENGINE_DB'),
-        'NAME': config('NAME_DB'),      
-        'USER': config('USER_DB'),             
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'trusted_connection': 'yes',  
+# ================================================ SECURITY (Producción) ================================================
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+
+#================================================ LOGS ======================================================
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
         },
-    }
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+        'rich': {
+            'format': "%(message)s",
+            'datefmt': "[%X]",
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            "class": "rich.logging.RichHandler",
+            'formatter': 'rich',
+            'rich_tracebacks': True,   
+            'markup': True,
+            'log_time_format': "%H:%M:%S",
+        },
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'django.log',
+            'maxBytes': 1024 * 1024 * 15,  # 15MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+            'filters': ['require_debug_false']
+        },
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'errors.log',
+            'maxBytes': 1024 * 1024 * 15,
+            'backupCount': 10,
+            'formatter': 'verbose',
+            'filters': ['require_debug_false']
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['error_file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'auth': {  
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'users': {  
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
 }
 
-#================================================= PASSWORD VALIDATORS =================================================
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
-
-
-#================================================ JWT ==========================================================
-
-#================================================ REST AUTH ==========================================================
-
-#================================================ ALL AUTH ==========================================================
-
-#================================================ REST_FRAMEWORK ======================================================
-
-#================================================ EMAIL CONFIG ==========================================================
-
-#================================================ COORS ==========================================================
-
-#================================================ EXTRAS ==============================================
-
-#================================================ LOGGING ======================================================
-
-#================================================ SOCIAL PROVIDERS ======================================================
 
 #================================================ CACHE ======================================================
+if config('CACHES_REDIS', default=False, cast=bool) == True:
+    CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': f'redis://{os.getenv("REDIS_HOST", "localhost")}:{os.getenv("REDIS_PORT", "6379")}/1',
+        'OPTIONS': {
+            'socket_connect_timeout': 5,
+            'socket_timeout': 5,
+        }
+    }
+}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'rate-limit-cache',
+        }
+    }
+
+
+
 
 #================================================ DOCUMENTACION SWAGGER ======================================================
+SPECTACULAR_SETTINGS = {
+    'TITLE': config('TITLE_SWAGGER'),
+    'DESCRIPTION': config('DESCRIPTION_SWAGGER'),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    
+    'TAGS': [
+        {'name': 'auth', 'description': 'Autenticación, providers y tokens JWT'},
+        {'name': 'users', 'description': 'Gestión de usuarios'},               
+    ],
+        
+        
+    'COMPONENT_SPLIT_REQUEST': True,  
+    'SCHEMA_PATH_PREFIX': r'/api/',   # Prefijo de tus URLs
+    
+    # Autenticación
+    'SECURITY': [{'bearerAuth': []}],
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+}
+
 
 #================================================ CONFIGURACION DE SENTRY ======================================================
+if not config('DEBUG', default=True, cast=bool):
+    sentry_sdk.init(
+        dsn=config('SDK_SENTRY', default=None),
+        send_default_pii=True,
+    )
 
+
+#-------------------------------------- IDIOMA - ZONA HORARIA  --------------------------------------------
+LANGUAGE_CODE = 'es-es'
+TIME_ZONE = 'America/Mexico_City'
+USE_I18N = True
+USE_TZ = True
+
+
+#================================================ EXTRAS ======================================================
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', cast=bool)
 WSGI_APPLICATION = 'config.wsgi.application'
@@ -137,7 +484,3 @@ ALLOWED_HOSTS = []
 
 ROOT_URLCONF = 'config.urls'
 
-LANGUAGE_CODE = 'es-es'
-TIME_ZONE = 'America/Mexico_City'
-USE_I18N = True
-USE_TZ = True

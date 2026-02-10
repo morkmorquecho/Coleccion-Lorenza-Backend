@@ -1,0 +1,421 @@
+# 🛍️ Colección Lorenza - API REST
+
+API REST completa para e-commerce con sistema de blog integrado, construida con Django REST Framework.
+
+## 📋 Tabla de Contenidos
+
+- [Stack Tecnológico](#-stack-tecnológico)
+- [Requisitos Previos](#-requisitos-previos)
+- [Instalación](#-instalación)
+- [Configuración](#️-configuración)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Comandos Útiles](#-comandos-útiles)
+- [Características Principales](#-características-principales)
+- [Documentación de la API](#-documentación-de-la-api)
+- [Deployment](#-deployment)
+
+## 🚀 Stack Tecnológico
+
+### Backend
+- **Django** 5.2.10
+- **Django REST Framework** - API REST
+- **Simple JWT** - Autenticación JWT
+- **dj-rest-auth** - Endpoints de autenticación
+- **django-allauth** - Autenticación social (Google)
+
+### Base de Datos
+- **SQL Server** (mssql-django)
+- Soporte para autenticación Windows y estándar
+
+### Documentación y Monitoreo
+- **drf-spectacular** - Documentación Swagger/OpenAPI
+- **Sentry** - Monitoreo de errores en producción
+- **Rich** - Logging mejorado en consola
+
+### Otras Herramientas
+- **django-cors-headers** - Manejo de CORS
+- **python-decouple** - Gestión de variables de entorno
+- **Redis** (opcional) - Cache y rate limiting
+
+## 📦 Requisitos Previos
+
+- Python 3.13+
+- pipenv (para gestión de dependencias)
+- SQL Server (o cualquier base de datos compatible)
+- ODBC Driver 17 for SQL Server
+
+### Instalar pipenv
+
+```bash
+pip install pipenv
+```
+
+## 🔧 Instalación
+
+### 1. Clonar el repositorio
+
+```bash
+git clone <url-del-repositorio>
+cd coleccion-lorenza
+```
+
+### 2. Instalar dependencias
+
+```bash
+pipenv install
+```
+
+### 3. Activar el entorno virtual
+
+```bash
+pipenv shell
+```
+
+### 4. Configurar variables de entorno
+
+Crea un archivo `.env` en la raíz del proyecto (ver sección [Configuración](#️-configuración)).
+
+### 5. Ejecutar migraciones
+
+```bash
+pipenv run mk  # Crear migraciones
+pipenv run mi  # Aplicar migraciones
+```
+
+### 6. Crear superusuario
+
+```bash
+pipenv run su
+```
+
+### 7. Ejecutar el servidor
+
+```bash
+pipenv run r
+```
+
+El servidor estará disponible en `http://localhost:8000`
+
+## ⚙️ Configuración
+
+### Variables de Entorno
+
+Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
+
+```env
+# ==================== CONFIGURACIÓN GENERAL ====================
+DEBUG=True
+SECRET_KEY=tu-secret-key-aqui
+ACTIVE_RATES=False  # True para activar rate limiting estricto
+CACHES_REDIS=False  # True para usar Redis como cache
+
+# ==================== BASE DE DATOS ====================
+ENGINE_DB=mssql
+NAME_DB=nombre_base_datos
+HOST_DB=localhost\SQLEXPRESS
+PORT_DB=1433
+
+# Para autenticación SQL Server estándar (descomenta si no usas Windows Auth)
+# USER_DB=tu_usuario
+# PASSWORD_DB=tu_contraseña
+
+# ==================== PAGINACIÓN ====================
+PAGINATION_LIMIT=15
+
+# ==================== EMAIL (Gmail SMTP) ====================
+EMAIL_HOST_USER=tu-email@gmail.com
+EMAIL_HOST_PASSWORD=tu-app-password-aqui  # Contraseña de aplicación de Gmail
+
+# ==================== CORS ====================
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+
+# ==================== AUTENTICACIÓN SOCIAL ====================
+# Google OAuth
+ID_GOOGLE_CLIENT=tu-client-id.apps.googleusercontent.com
+SECRET_GOOGLE_CLIENT=tu-secret-client
+GOOGLE_CALLBACK=http://localhost:8000/auth/google/callback
+
+# Facebook OAuth (opcional)
+FACEBOOK_APP_ID=
+FACEBOOK_APP_SECRET=
+
+# ==================== SENTRY (Producción) ====================
+SDK_SENTRY=https://tu-dsn@sentry.io/proyecto
+
+# ==================== DOCUMENTACIÓN SWAGGER ====================
+TITLE_SWAGGER=API Colección Lorenza
+DESCRIPTION_SWAGGER=API REST para e-commerce con gestión de productos, órdenes y blog
+```
+
+### Notas de Configuración
+
+#### Base de Datos
+
+**Opción 1: Autenticación Windows (SQL Server)**
+```env
+ENGINE_DB=mssql
+NAME_DB=coleccion_lorenza
+HOST_DB=DESKTOP-Q020TPN\SQLEXPRESS
+```
+
+**Opción 2: Autenticación SQL Server**
+Descomenta las líneas en `settings.py` para usar autenticación estándar:
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': config('DB_ENGINE'),
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT', cast=int),
+    }
+}
+```
+
+#### Email (Gmail)
+
+Para usar Gmail necesitas generar una **contraseña de aplicación**:
+1. Ir a https://myaccount.google.com/security
+2. Activar verificación en 2 pasos
+3. Generar contraseña de aplicación
+4. Usar esa contraseña en `EMAIL_HOST_PASSWORD`
+
+#### Redis (Opcional)
+
+Si quieres usar Redis para cache:
+```env
+CACHES_REDIS=True
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+## 📁 Estructura del Proyecto
+
+```
+coleccion-lorenza/
+├── config/                  # Configuración del proyecto
+│   ├── settings.py         # Configuración principal
+│   ├── urls.py            # URLs principales
+│   ├── wsgi.py            # WSGI para deployment
+│   ├── renderers.py       # Renderizadores personalizados
+│   └── throttling.py      # Rate limiting personalizado
+│
+├── users/                  # App de usuarios
+│   ├── models.py
+│   ├── serializers.py
+│   ├── views.py
+│   └── urls.py
+│
+├── blog/                   # App de blog
+├── orders/                 # App de órdenes
+├── reviews/                # App de reseñas
+├── pieces/                 # App de piezas/productos
+├── core/                   # Utilidades compartidas
+│   └── utils/
+│       └── exceptions.py  # Manejo de excepciones
+│
+├── templates/              # Templates de email
+├── media/                  # Archivos multimedia
+├── staticfiles/           # Archivos estáticos
+├── logs/                   # Logs de la aplicación
+│   ├── django.log
+│   └── errors.log
+│
+├── Pipfile                # Dependencias
+├── Pipfile.lock
+├── manage.py
+├── .env                   # Variables de entorno (no incluir en git)
+└── README.md
+```
+
+## 🎯 Comandos Útiles
+
+El proyecto incluye scripts de pipenv para facilitar el desarrollo:
+
+```bash
+# Servidor de desarrollo
+pipenv run r
+
+# Migraciones
+pipenv run mk              # Crear migraciones
+pipenv run mi              # Aplicar migraciones
+
+# Gestión de usuarios
+pipenv run su              # Crear superusuario
+
+# Desarrollo
+pipenv run sh              # Django shell
+pipenv run test            # Ejecutar tests
+pipenv run st <nombre>     # Crear nueva app
+
+# Mantenimiento
+pipenv run clearsessions   # Limpiar sesiones expiradas
+
+# Comando directo de Django
+pipenv run django <comando>
+```
+
+## ✨ Características Principales
+
+### Autenticación y Seguridad
+
+- ✅ **JWT (JSON Web Tokens)** con refresh tokens
+- ✅ **Autenticación social** con Google OAuth
+- ✅ **Verificación de email** obligatoria
+- ✅ **Rate limiting** configurable por endpoint
+- ✅ **CORS** configurado para frontend
+- ✅ **Blacklist de tokens** JWT
+
+### API REST
+
+- ✅ **Paginación automática** (15 items por defecto)
+- ✅ **Documentación Swagger/OpenAPI** en `/api/schema/swagger-ui/`
+- ✅ **Respuestas estandarizadas** con renderer personalizado
+- ✅ **Manejo de excepciones** centralizado
+- ✅ **Throttling por usuario y endpoint**
+
+### Logging y Monitoreo
+
+- ✅ **Logs enriquecidos** con Rich en consola
+- ✅ **Logs rotativos** en archivos (15MB máx)
+- ✅ **Sentry** para monitoreo en producción
+- ✅ **Logs separados** para errores
+
+### Base de Datos
+
+- ✅ **SQL Server** con soporte Windows Auth
+- ✅ **Migraciones automáticas**
+- ✅ **ORM de Django**
+
+### Módulos del Sistema
+
+- **Users** - Gestión de usuarios y perfiles
+- **Blog** - Sistema de publicaciones
+- **Orders** - Gestión de pedidos
+- **Reviews** - Sistema de reseñas
+- **Pieces** - Catálogo de productos
+- **Core** - Utilidades compartidas
+
+## 📚 Documentación de la API
+
+### Swagger UI
+
+La documentación interactiva de la API está disponible en:
+
+```
+http://localhost:8000/api/schema/swagger-ui/
+```
+
+### Endpoints Principales
+
+#### Autenticación
+
+```
+POST   /api/auth/register/           # Registro de usuario
+POST   /api/auth/login/              # Login (JWT)
+POST   /api/auth/logout/             # Logout
+POST   /api/auth/token/refresh/      # Refrescar token
+POST   /api/auth/google/             # Login con Google
+GET    /api/auth/user/               # Información del usuario actual
+```
+
+#### Rate Limits
+
+Los límites de rate limiting dependen de `ACTIVE_RATES`:
+
+**Desarrollo** (`ACTIVE_RATES=False`):
+- Usuarios anónimos: 9,935 req/hora
+- Usuarios autenticados: 99,500 req/hora
+
+**Producción** (`ACTIVE_RATES=True`):
+- Usuarios anónimos: 35 req/hora
+- Usuarios autenticados: 500 req/hora
+- Login: 5 req/hora
+- Registro: 3 req/hora
+- Endpoints sensibles: 5 req/hora
+- Burst: 30 req/min
+
+### Autenticación
+
+Incluye el token JWT en el header:
+
+```
+Authorization: Bearer <tu-access-token>
+```
+
+## 🚀 Deployment
+
+### Preparación para Producción
+
+1. **Variables de entorno**
+
+```env
+DEBUG=False
+SECRET_KEY=<genera-una-clave-segura>
+ACTIVE_RATES=True
+ALLOWED_HOSTS=tu-dominio.com
+```
+
+2. **Seguridad SSL**
+
+Cuando `DEBUG=False`, se activan automáticamente:
+- HTTPS redirect
+- HSTS
+- Secure cookies
+
+3. **Archivos estáticos**
+
+```bash
+python manage.py collectstatic
+```
+
+4. **Sentry**
+
+Configura `SDK_SENTRY` con tu DSN de Sentry.
+
+### Checklist de Deployment
+
+- [ ] `DEBUG=False`
+- [ ] `SECRET_KEY` único y seguro
+- [ ] Base de datos de producción configurada
+- [ ] `ALLOWED_HOSTS` configurado
+- [ ] Variables de entorno seguras
+- [ ] Sentry configurado
+- [ ] Redis configurado (recomendado)
+- [ ] Archivos estáticos servidos correctamente
+- [ ] HTTPS configurado
+- [ ] Backups de base de datos programados
+- [ ] Logs monitoreados
+
+### Servidores Recomendados
+
+- **Web Server**: Gunicorn + Nginx
+- **Base de datos**: SQL Server (Azure SQL, AWS RDS)
+- **Cache**: Redis Cloud
+- **Hosting**: Azure, AWS, DigitalOcean, Railway
+
+## 📝 Notas Adicionales
+
+### Desarrollo
+
+- El proyecto usa **Rich** para logs coloridos en desarrollo
+- Los logs se guardan en `logs/django.log` y `logs/errors.log`
+- El proyecto usa **pipenv** para gestión de dependencias
+
+### Extensibilidad
+
+Este README está diseñado para ser una plantilla. Personalízalo según las necesidades de cada proyecto:
+
+1. Actualiza el nombre y descripción
+2. Ajusta las apps instaladas
+3. Modifica las variables de entorno según tus necesidades
+4. Actualiza los endpoints según tu API
+
+
+
+## 👥 Autores
+
+[Añade información del equipo aquí]
+
+---

@@ -5,10 +5,17 @@ name = "pypi"
 
 [packages]
 django = "*"
-djangorestframework = "*"
-djangorestframework-simplejwt = "*"
 python-decouple = "*"
 mssql-django = "*"
+djangorestframework-simplejwt = "*"
+djangorestframework = "*"
+django-cors-headers = "*"
+sentry-sdk = {extras = ["django"], version = "*"}
+drf-spectacular = "*"
+dj-rest-auth = "==6.0.0"
+rich = "*"
+itsdangerous = "*"
+django-redis = "*"
 
 [dev-packages]
 

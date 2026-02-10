@@ -16,7 +16,7 @@ User = get_user_model()
 
 @extend_schema(
     summary="Modificar Correo",
-    tags=["user"],
+    tags=["users"],
     description=(
         "Se solicita la actualizacion del correo electronico del usuario\n\n"
         "Se envía un correo de verificación para actualizar el nuevo correo, este correo llega el nuevo correo\n\n"

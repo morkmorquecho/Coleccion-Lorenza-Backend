@@ -7,8 +7,8 @@ name = "pypi"
 django = "*"
 python-decouple = "*"
 mssql-django = "*"
-djangorestframework-simplejwt = "*"
 djangorestframework = "*"
+djangorestframework-simplejwt = "*"
 django-cors-headers = "*"
 sentry-sdk = {extras = ["django"], version = "*"}
 drf-spectacular = "*"
@@ -16,11 +16,16 @@ dj-rest-auth = "==6.0.0"
 rich = "*"
 itsdangerous = "*"
 django-redis = "*"
+django-allauth = "*"
+requests = "*"
+cryptography = "*"
+pyodbc = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.13"
+python_version = "3.11"
 
 [scripts]
 r = "python manage.py runserver"
@@ -29,7 +34,7 @@ mk = "python manage.py makemigrations"
 su = "python manage.py createsuperuser"
 sh = "python manage.py shell"
 test = "python manage.py test"
-st= "python manage.py startapp"
+st = "python manage.py startapp"
 clearsessions = "python manage.py clearsessions"
 install-dev = "pipenv install --dev django-extensions"
 django = "python manage.py"

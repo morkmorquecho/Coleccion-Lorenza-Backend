@@ -39,7 +39,7 @@ API REST completa para e-commerce con sistema de blog integrado, construida con 
 
 ## 📦 Requisitos Previos
 
-- Python 3.13+
+- Python 3.11+
 - pipenv (para gestión de dependencias)
 - SQL Server (o cualquier base de datos compatible)
 - ODBC Driver 17 for SQL Server

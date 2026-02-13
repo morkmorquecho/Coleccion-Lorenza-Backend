@@ -62,30 +62,30 @@ INSTALLED_APPS = [
 
 
 #================================================= CONFIG DATABSE =================================================
-#Autenticacion por Windows (comun en sql server)
-DATABASES = {
-    'default': {
-        'ENGINE': config('ENGINE_DB'),
-        'NAME': config('NAME_DB'),      
-        'HOST': config('HOST_DB'),
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'trusted_connection': 'yes',
-        },
-    }
-}
-
-#Autenticacion usual
+# #Autenticacion por Windows (comun en sql server)
 # DATABASES = {
 #     'default': {
 #         'ENGINE': config('DB_ENGINE'),
-#         'NAME': config('DB_NAME'),
-#         'USER': config('DB_USER'),
-#         'PASSWORD': config('DB_PASSWORD'),
+#         'NAME': config('DB_NAME'),      
 #         'HOST': config('DB_HOST'),
-#         'PORT': config('DB_PORT', cast=int),
+#         'OPTIONS': {
+#             'driver': 'ODBC Driver 17 for SQL Server',
+#             'trusted_connection': 'yes',
+#         },
 #     }
 # }
+
+# Autenticacion usual
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
+    }
+}
 if 'test' in sys.argv:
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',

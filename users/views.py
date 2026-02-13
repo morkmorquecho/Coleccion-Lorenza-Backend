@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework.generics import UpdateAPIView
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from core.mixins import IsOwner, SentryErrorHandlerMixin
+from users.docs.schemas import EMAIL_UPDATE
 from users.serializers import EmailUpdateSerializer
 from auth.services import UsersRegisterService
 from core.services.email_service import ConfirmUserEmail,UpdateUserEmail
@@ -14,19 +15,7 @@ _MODULE_PATH = __name__
 
 User = get_user_model()
 
-@extend_schema(
-    summary="Modificar Correo",
-    tags=["users"],
-    description=(
-        "Se solicita la actualizacion del correo electronico del usuario\n\n"
-        "Se envía un correo de verificación para actualizar el nuevo correo, este correo llega el nuevo correo\n\n"
-        "Accesible para usuarios autenticados\n\n"
-        f"**Code:** `{_MODULE_PATH}.UserViewSet_post`"
-    ),
-    responses={
-        201: OpenApiResponse(description="si el correo existe, te llegara una notificacion con los pasos siguientes"),
-    }
-)
+EMAIL_UPDATE
 class EmailUpdateAPIView(SentryErrorHandlerMixin, UpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = EmailUpdateSerializer

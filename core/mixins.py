@@ -434,9 +434,46 @@ class ViewSetSentryMixin(SentryErrorHandlerMixin):
             return super().handle_exception(exc)
 
 class IsOwner(permissions.BasePermission):
-    """
-    Permiso que solo permite al owner acceder al objeto.
-    """
-    
     def has_object_permission(self, request, view, obj):
-        return obj == request.user
+        return obj.user_id == request.user.id 
+    
+# core/admin.py
+from django.contrib import admin
+from django.utils.html import format_html
+
+
+class SoftDeleteAdminMixin:
+    """
+    Mixin para que el admin vea todos los registros
+    incluyendo los eliminados con soft delete.
+    """
+
+    def get_queryset(self, request):
+        # Usa all_objects para saltarse el filtro del SoftDeleteManager
+        return self.model.all_objects.all()
+
+    # Columna visual para saber el estado del registro
+    def estado_registro(self, obj):
+        if obj.is_deleted:
+            return format_html(
+                '<span style="color: red; font-weight: bold;">🗑 Eliminado ({})</span>',
+                obj.deleted_at.strftime("%d/%m/%Y %H:%M")
+            )
+        if not obj.is_active:
+            return format_html('<span style="color: orange;">⚠ Inactivo</span>')
+        return format_html('<span style="color: green;">✓ Activo</span>')
+
+    estado_registro.short_description = "Estado"
+
+    # Acciones desde el admin
+    actions = ['action_restore', 'action_deactivate']
+
+    def action_restore(self, request, queryset):
+        queryset.update(deleted_at=None, is_active=True)
+        self.message_user(request, f"{queryset.count()} registro(s) restaurados.")
+    action_restore.short_description = "Restaurar registros seleccionados"
+
+    def action_deactivate(self, request, queryset):
+        queryset.update(is_active=False)
+        self.message_user(request, f"{queryset.count()} registro(s) desactivados.")
+    action_deactivate.short_description = "Desactivar registros seleccionados"

@@ -1,7 +1,5 @@
 from django.test import TestCase
 
-# Create your tests here.
-# auth/tests/test_jwt_views.py
 from django.test import TestCase
 from rest_framework.exceptions import ValidationError  # ← Importar de DRF
 from rest_framework.test import APIClient

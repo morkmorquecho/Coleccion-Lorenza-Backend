@@ -21,6 +21,11 @@ requests = "*"
 cryptography = "*"
 pyodbc = "*"
 psycopg2-binary = "*"
+django-storages = "*"
+boto3 = "*"
+pillow = "*"
+django-filter = "*"
+drf-nested-routers = "*"
 
 [dev-packages]
 

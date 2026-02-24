@@ -11,6 +11,7 @@ from .models import Address
 class AddressAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
+        'is_active',
         "user",
         "recipient_name",
         "country",
@@ -21,7 +22,6 @@ class AddressAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
         'created_at',
         'updated_at',
         'deleted_at',
-        'is_active',
     )
     list_filter = ("country", "state", "city", "is_default")
     search_fields = (

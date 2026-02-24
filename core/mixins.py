@@ -10,8 +10,10 @@ from smtplib import SMTPException
 from requests.exceptions import RequestException, Timeout, ConnectionError
 from rest_framework import permissions
 from allauth.socialaccount.providers.oauth2.client import OAuth2Error
-
+from django.contrib import admin
+from django.utils.html import format_html
 from core.responses.messages import ErrorMessages
+from django.db import transaction
 
 
 class SentryErrorHandlerMixin:
@@ -432,27 +434,22 @@ class ViewSetSentryMixin(SentryErrorHandlerMixin):
                 request=self.request
             )
             return super().handle_exception(exc)
-
-class IsOwner(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        return obj.user_id == request.user.id 
     
-# core/admin.py
-from django.contrib import admin
-from django.utils.html import format_html
-
-
 class SoftDeleteAdminMixin:
     """
     Mixin para que el admin vea todos los registros
     incluyendo los eliminados con soft delete.
     """
+    readonly_fields = ('created_at', 'updated_at', 'deleted_at')
+
+    def get_readonly_fields(self, request, obj=None):
+        audit_fields = {'created_at', 'updated_at', 'deleted_at'}
+        existing = set(super().get_readonly_fields(request, obj))
+        return tuple(existing | audit_fields)
 
     def get_queryset(self, request):
-        # Usa all_objects para saltarse el filtro del SoftDeleteManager
         return self.model.all_objects.all()
 
-    # Columna visual para saber el estado del registro
     def estado_registro(self, obj):
         if obj.is_deleted:
             return format_html(
@@ -465,7 +462,6 @@ class SoftDeleteAdminMixin:
 
     estado_registro.short_description = "Estado"
 
-    # Acciones desde el admin
     actions = ['action_restore', 'action_deactivate']
 
     def action_restore(self, request, queryset):
@@ -477,3 +473,42 @@ class SoftDeleteAdminMixin:
         queryset.update(is_active=False)
         self.message_user(request, f"{queryset.count()} registro(s) desactivados.")
     action_deactivate.short_description = "Desactivar registros seleccionados"
+
+class ImagenPKMixin:
+    """
+    Mixin para modelos que tienen ImageFields y necesitan
+    que el archivo se nombre usando el PK del objeto.
+    
+    Uso:
+        class pieces(ImagenPKMixin, models.Model):
+            imagen = models.ImageField(...)
+        
+        # Si tienes varios ImageFields:
+        class pieces(ImagenPKMixin, models.Model):
+            imagen_principal = models.ImageField(...)
+            imagen_secundaria = models.ImageField(...)
+    """
+
+    def _get_image_fields(self):
+        """Detecta automáticamente todos los ImageFields del modelo."""
+        from django.db.models import ImageField
+        return [
+            f.attname for f in self._meta.get_fields()
+            if isinstance(f, ImageField)
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            imagenes_temporales = {}
+            for field_name in self._get_image_fields():
+                imagenes_temporales[field_name] = getattr(self, field_name)
+                setattr(self, field_name, None)
+
+            with transaction.atomic():
+                super().save(*args, **kwargs)
+                for field_name, valor in imagenes_temporales.items():
+                    setattr(self, field_name, valor)
+                kwargs.pop('force_insert', None)
+                super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)

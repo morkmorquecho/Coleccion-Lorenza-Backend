@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from rest_framework.generics import UpdateAPIView, GenericAPIView
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
-from core.mixins import IsOwner, SentryErrorHandlerMixin
+from core.mixins import SentryErrorHandlerMixin, ViewSetSentryMixin
+from core.permission import IsOwner
 from core.responses.messages import UserMessages
 from users.docs.schemas import ADDRESS_SET_DEFAULT, ADDRESS_VIEWSET, EMAIL_UPDATE
 from users.serializers import EmailUpdateSerializer, AddressSerializer
@@ -53,12 +54,13 @@ class EmailUpdateAPIView(SentryErrorHandlerMixin, GenericAPIView):
         )
 
 @ADDRESS_VIEWSET
-class AddressViewSet(viewsets.ModelViewSet):
+class AddressViewSet(ViewSetSentryMixin, viewsets.ModelViewSet):
     serializer_class = AddressSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
 
     def get_queryset(self):
-        # El usuario solo ve sus propias direcciones
+        if getattr(self, "swagger_fake_view", False): 
+                return Address.objects.none()
         return Address.objects.filter(user=self.request.user).order_by('-is_default', '-created_at')
 
     @ADDRESS_SET_DEFAULT

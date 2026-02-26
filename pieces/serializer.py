@@ -27,8 +27,7 @@ class PieceSerializer(serializers.ModelSerializer):
     # Campos calculados
     has_discount = serializers.SerializerMethodField()
     discount_percentage = serializers.SerializerMethodField()
-    final_price_mx = serializers.SerializerMethodField()
-    final_price_usa = serializers.SerializerMethodField()
+    final_price_base = serializers.SerializerMethodField()
 
     class Meta:
         model = Piece
@@ -39,8 +38,7 @@ class PieceSerializer(serializers.ModelSerializer):
             "description",
             "thumbnail_path",
             "quantity",
-            "price_mx",
-            "price_usa",
+            "price_base",
             "width",
             "height",
             "length",
@@ -55,8 +53,7 @@ class PieceSerializer(serializers.ModelSerializer):
             # calculados
             "has_discount",
             "discount_percentage",
-            "final_price_mx",
-            "final_price_usa",
+            "final_price_base",
         ]
 
     def _get_active_discount(self, obj):
@@ -88,11 +85,9 @@ class PieceSerializer(serializers.ModelSerializer):
         factor = 1 - (Decimal(discount.percentage) / Decimal("100"))
         return round(price * factor, 2)
 
-    def get_final_price_mx(self, obj) -> float:
-        return self._apply_discount(obj.price_mx, self._get_active_discount(obj))
+    def get_final_price_base(self, obj) -> float:
+        return self._apply_discount(obj.get_final_price('MX'), self._get_active_discount(obj))
 
-    def get_final_price_usa(self, obj) -> float:
-        return self._apply_discount(obj.price_usa, self._get_active_discount(obj))
     
 class PiecePhotoSerializer(serializers.ModelSerializer):
     class Meta:

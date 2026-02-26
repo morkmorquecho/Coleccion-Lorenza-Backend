@@ -1,3 +1,5 @@
+from decimal import Decimal
+import math
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -5,6 +7,7 @@ from django.utils import timezone
 from core.mixins import ImagenPKMixin
 from core.models import BaseModel
 from core.utils.storages import borrar_archivo_storage
+from core.utils.validations import validate_date_range
 from pieces.utils import upload_piece_image, upload_pieces_thumb
 from django.core.validators import MinValueValidator, MaxValueValidator
 
@@ -41,8 +44,7 @@ class Piece(ImagenPKMixin, BaseModel):
     description = models.TextField()
     
     quantity = models.IntegerField()
-    price_mx = models.DecimalField(max_digits=10, decimal_places=2)
-    price_usa = models.DecimalField(max_digits=10, decimal_places=2)
+    price_base = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     width = models.DecimalField(max_digits=10, decimal_places=2)
     height = models.DecimalField(max_digits=10, decimal_places=2)
@@ -57,25 +59,30 @@ class Piece(ImagenPKMixin, BaseModel):
     class Meta:
         verbose_name = 'Pieza'
         verbose_name_plural = 'Piezas'
-
-    def __str__(self):
-        return self.title
-
     
     @property
     def volumetric_weight(self):
-        return max((self.width * self.height * self.length) / 5000, 1)
-
-    def clean(self):
-        if self.price_mx >= self.price_usa:
-            raise ValidationError({
-                'price_mx': 'price_mx debe ser menor que price_usa'
-            })
+        return max((self.width * self.height * self.weight) / 5000, 1)
 
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+    def get_final_price(self, region: str) -> Decimal:
+        peso = math.ceil(self.volumetric_weight)  
+
+        shipping = ShippingRate.objects.filter(
+            region=region.upper(),
+            kg=peso
+        ).first()
+
+        if not shipping:
+            return self.price_base
+
+        return self.price_base + shipping.cost
         
+    def __str__(self):
+        return self.title
 
 class Discount(BaseModel):
     percentage = models.DecimalField( max_digits=3, decimal_places=1, validators=[MinValueValidator(0.1)])
@@ -88,16 +95,7 @@ class Discount(BaseModel):
         ordering = ['percentage']
 
     def clean(self):
-        today = timezone.now().date()
-
-        if self.start_date and self.start_date < today:
-            raise ValidationError({"start_date": "start_date debe ser posterior al día actual."})
-
-        if self.end_date and self.end_date <= today:
-            raise ValidationError({"end_date": "end_date debe ser posterior al día actual."})
-
-        if self.start_date and self.end_date and self.start_date >= self.end_date:
-            raise ValidationError({"end_date": "end_date debe ser mayor a start_date."})
+        validate_date_range(self.start_date, self.end_date)
 
     def __str__(self):
         return f"{self.percentage}% from {self.start_date} to {self.end_date}"
@@ -150,3 +148,17 @@ class PiecePhoto(ImagenPKMixin, BaseModel):
 
     def __str__(self):
         return f"Photo of {self.piece.title}"
+
+class ShippingRate(BaseModel):
+    region = models.CharField(max_length=10, choices=[('MX', 'México'), ('USA', 'Estados Unidos')])
+    kg = models.IntegerField()
+    cost = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        ordering = ['region', 'kg']
+        unique_together = ['region', 'kg']  
+        verbose_name = 'Tarifa de envío'
+        verbose_name_plural = 'Tarifas de envío'
+
+    def __str__(self):
+        return f"{self.region} - {self.kg}kg: ${self.cost}"

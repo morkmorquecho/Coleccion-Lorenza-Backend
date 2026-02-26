@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib import admin
 
 from core.mixins import SoftDeleteAdminMixin
-from .models import Discount, PieceDiscount, PiecePhoto, TypePiece, Section, Piece
+from .models import Discount, PieceDiscount, PiecePhoto, ShippingRate, TypePiece, Section, Piece
 
 
 @admin.register(TypePiece)
@@ -26,8 +26,7 @@ class PieceAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
         'id',
         'is_active',
         'title',
-        'price_mx',
-        'price_usa',
+        'price_base',
         'quantity',
         'customizable',
         'featured',
@@ -71,3 +70,8 @@ class PiecePhotoAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = ("is_active", "piece", "image_path", "created_at")
     list_select_related = ("piece",)
     search_fields = ("piece__title",)
+
+@admin.register(ShippingRate)
+class ShippingRateAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
+    list_display = ("region", "kg", "cost")
+    search_fields = ("kg",)

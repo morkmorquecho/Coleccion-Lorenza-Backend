@@ -523,6 +523,12 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',  # 1 día
 }
 
+#================================================ STRIPE ======================================================
+
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')       
+STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY')  
+STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET') 
+
 #================================================ EXTRAS ======================================================
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', cast=bool)

@@ -32,8 +32,7 @@ def piece_payload(type_piece, section, title='Mi Pieza', **kwargs):
         'title': title,
         'description': 'Descripción de prueba',
         'quantity': 5,
-        'price_mx': '100.00',
-        'price_usa': '200.00',
+        'price_base': '100.00',
         'width': '10.00',
         'height': '20.00',
         'length': '5.00',
@@ -67,8 +66,7 @@ class PieceBaseTestCase(TestCase):
             slug='hello-world',
             description='Descripción de prueba',
             quantity=3,
-            price_mx=100,
-            price_usa=200,
+            price_base=100,
             width=10,
             height=20,
             length=5,
@@ -92,41 +90,40 @@ class PieceBaseTestCase(TestCase):
 
 # ── Lectura pública ───────────────────────────────────────────────────────────
 
-# class PieceReadAccessTest(PieceBaseTestCase):
+class PieceReadAccessTest(PieceBaseTestCase):
 
-#     def test_list_pieces_unauthenticated(self):
-#         response = self.client.get(LIST_URL)
-#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+    def test_list_pieces_unauthenticated(self):
+        response = self.client.get(LIST_URL)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-#     def test_retrieve_piece_by_slug(self):
-#         response = self.client.get(detail_url(self.piece.slug))
-#         self.assertEqual(response.status_code, status.HTTP_200_OK)
-#         self.assertEqual(response.data['slug'], self.piece.slug)
+    def test_retrieve_piece_by_slug(self):
+        response = self.client.get(detail_url(self.piece.slug))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['slug'], self.piece.slug)
 
-#     def test_retrieve_nonexistent_piece_returns_404(self):
-#         response = self.client.get(detail_url('no-existe'))
-#         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    def test_retrieve_nonexistent_piece_returns_404(self):
+        response = self.client.get(detail_url('no-existe'))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-#     def test_list_returns_all_pieces(self):
-#         Piece.objects.create(
-#             title='Segunda Pieza',
-#             slug='segunda-pieza',
-#             description='Otra descripción',
-#             quantity=1,
-#             price_mx=50,
-#             price_usa=150,
-#             width=5,
-#             height=10,
-#             length=3,
-#             weight=1.0,
-#             type=self.type_piece,
-#             section=self.section,
-#             thumbnail_path=fake_image(),
-#         )
-#         response = self.client.get(LIST_URL)
-#         self.assertEqual(response.status_code, status.HTTP_200_OK)
-#         # ajusta si no usas paginación (cambia 'results' por response.data directamente)
-#         self.assertEqual(len(response.data['results']), 2)
+    def test_list_returns_all_pieces(self):
+        Piece.objects.create(
+            title='Segunda Pieza',
+            slug='segunda-pieza',
+            description='Otra descripción',
+            quantity=1,
+            price_base=50,
+            width=5,
+            height=10,
+            length=3,
+            weight=1.0,
+            type=self.type_piece,
+            section=self.section,
+            thumbnail_path=fake_image(),
+        )
+        response = self.client.get(LIST_URL)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # ajusta si no usas paginación (cambia 'results' por response.data directamente)
+        self.assertEqual(len(response.data['results']), 2)
 
 
 # ── Creación ──────────────────────────────────────────────────────────────────

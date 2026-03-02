@@ -224,10 +224,9 @@ class StripeWebhookView(SentryErrorHandlerMixin, APIView):
         order.status = 'cancelled'
         order.save()
 
-        # Revertir stock
         for item in order.orderitem_set.all():
             piece = item.piece
-            piece.quantity += item.quantity
+            piece.quantity += item.quantity 
             piece.save()
 
 class CancelOrderView(SentryErrorHandlerMixin, APIView):

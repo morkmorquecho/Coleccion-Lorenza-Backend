@@ -202,7 +202,7 @@ class StripeWebhookView(SentryErrorHandlerMixin, APIView):
         # Devolver stock
         for item in order.orderitem_set.all():
             piece = item.piece
-            piece.stock += item.quantity
+            piece.quantity += item.quantity
             piece.save()
         
     @transaction.atomic

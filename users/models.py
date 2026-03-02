@@ -29,6 +29,7 @@ class Address(BaseModel):
     class Meta:
         verbose_name = 'Direccion'
         verbose_name_plural = 'Direcciones'
+        app_label = 'users'
 
 
     def __str__(self):

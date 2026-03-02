@@ -72,8 +72,8 @@ class ShippingTracking(BaseModel):
         ('fedex', 'FedEx'),
     ]
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    carrier = models.CharField(max_length=50, choices=CARRIER_CHOICES)
-    tracking_number = models.CharField(max_length=100)
+    carrier = models.CharField(max_length=50, choices=CARRIER_CHOICES, default='fedex')
+    tracking_number = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     shipped_at = models.DateTimeField (null=True, blank=True)
     delivered_at = models.DateTimeField (null=True, blank=True)

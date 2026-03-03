@@ -14,13 +14,14 @@ from rest_framework import status
 from config import settings
 from core.mixins import SentryErrorHandlerMixin, ViewSetSentryMixin
 from core.permission import IsAdminOrReadOnly, IsOwner
-from orders.filters import ShippingTrackingFilter
-from orders.serializer import CheckoutSerializer, OrderSerializer
+from orders.docs.schemas import CANCEL_ORDER_VIEW, CHECKOUT_VIEW, ORDER_VIEWSET, SHIPPING_TRACKING_VIEWSET, STRIPE_WEBHOOK_VIEW
+from orders.filters import OrderFilter
+from orders.serializer import CheckoutSerializer, OrderSerializer, ShippingTrackingSerializer
 from .models import CouponUsage, Order, OrderItem, Payment, ShippingTracking
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-
+@CHECKOUT_VIEW
 class CheckoutView(SentryErrorHandlerMixin, APIView):
     permission_classes = [IsAuthenticated]
 
@@ -125,7 +126,7 @@ class CheckoutView(SentryErrorHandlerMixin, APIView):
 
         return order, payment_intent['client_secret']
 
-
+@STRIPE_WEBHOOK_VIEW
 @method_decorator(csrf_exempt, name='dispatch')
 class StripeWebhookView(SentryErrorHandlerMixin, APIView):
     """
@@ -232,6 +233,7 @@ class StripeWebhookView(SentryErrorHandlerMixin, APIView):
             piece.quantity += item.quantity 
             piece.save()
 
+@CANCEL_ORDER_VIEW
 class CancelOrderView(SentryErrorHandlerMixin, APIView):
     permission_classes = [IsAuthenticated]
 
@@ -297,14 +299,32 @@ class CancelOrderView(SentryErrorHandlerMixin, APIView):
 
         return Response({'message': 'Orden cancelada correctamente.'}, status=200)
 
-
+@ORDER_VIEWSET
 class OrderViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
     queryset = Order.objects.prefetch_related(
         'items',
-        'couponusages',
+        'coupon_usage',
         'payments'
     ).select_related('user', 'address')
     serializer_class = OrderSerializer
     permission_classes = [IsOwner]
-    filterset_class = ShippingTrackingFilter
+    filterset_class = OrderFilter
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user or not user.is_authenticated:
+            return Order.objects.none()
+        
+        return Order.objects.filter(user_id=user.id)
+@SHIPPING_TRACKING_VIEWSET
+class ShippingTrackingViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
+    serializer_class = ShippingTrackingSerializer 
+    permission_classes = [IsOwner]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user or not user.is_authenticated:
+            return ShippingTracking.objects.none()
+        
+        return ShippingTracking.objects.filter(order__user_id=user.id)
 

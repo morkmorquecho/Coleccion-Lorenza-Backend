@@ -59,12 +59,12 @@ class CouponUsageSerializer(serializers.ModelSerializer):
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
-        fields = '__all__'
         exclude = ['external_id'] 
+
 class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True, read_only=True, source='items')
-    coupons = CouponUsageSerializer(many=True, read_only=True, source='coupon_usage')
-    payments = PaymentSerializer(many=True, read_only=True, source='payments')
+    items = OrderItemSerializer(many=True, read_only=True)
+    coupon_usage = CouponUsageSerializer(many=True, read_only=True)
+    payments = PaymentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
@@ -73,4 +73,4 @@ class OrderSerializer(serializers.ModelSerializer):
 class ShippingTrackingSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShippingTracking
-        fields = '__all__'
+        exclude = ['order'] 

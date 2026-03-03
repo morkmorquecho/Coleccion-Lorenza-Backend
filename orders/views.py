@@ -4,6 +4,7 @@ import stripe
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,8 +12,10 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
 from config import settings
-from core.mixins import SentryErrorHandlerMixin
-from orders.serializer import CheckoutSerializer
+from core.mixins import SentryErrorHandlerMixin, ViewSetSentryMixin
+from core.permission import IsAdminOrReadOnly, IsOwner
+from orders.filters import ShippingTrackingFilter
+from orders.serializer import CheckoutSerializer, OrderSerializer
 from .models import CouponUsage, Order, OrderItem, Payment, ShippingTracking
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -200,7 +203,7 @@ class StripeWebhookView(SentryErrorHandlerMixin, APIView):
         order.save()
 
         # Devolver stock
-        for item in order.orderitem_set.all():
+        for item in order.items.all():
             piece = item.piece
             piece.quantity += item.quantity
             piece.save()
@@ -224,7 +227,7 @@ class StripeWebhookView(SentryErrorHandlerMixin, APIView):
         order.status = 'cancelled'
         order.save()
 
-        for item in order.orderitem_set.all():
+        for item in order.items.all():
             piece = item.piece
             piece.quantity += item.quantity 
             piece.save()
@@ -250,7 +253,7 @@ class CancelOrderView(SentryErrorHandlerMixin, APIView):
                 status=400
             )
 
-        payment = order.payment_set.first()
+        payment = order.payments.first()
 
         # 3. Caso: aún no se pagó → cancelar PaymentIntent en Stripe
         if order.status == 'pending':
@@ -274,7 +277,7 @@ class CancelOrderView(SentryErrorHandlerMixin, APIView):
                 )
 
         # 5. Revertir stock
-        for item in order.orderitem_set.all():
+        for item in order.items.all():
             piece = item.piece
             piece.quantity += item.quantity
             piece.save()
@@ -288,8 +291,20 @@ class CancelOrderView(SentryErrorHandlerMixin, APIView):
             payment.save()
 
         # 7. Cancelar el ShippingTracking si existe
-        tracking = order.shippingtracking_set.first()
+        tracking = order.trakings.first()
         if tracking and tracking.status == 'pending':
             tracking.delete()
 
         return Response({'message': 'Orden cancelada correctamente.'}, status=200)
+
+
+class OrderViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
+    queryset = Order.objects.prefetch_related(
+        'items',
+        'couponusages',
+        'payments'
+    ).select_related('user', 'address')
+    serializer_class = OrderSerializer
+    permission_classes = [IsOwner]
+    filterset_class = ShippingTrackingFilter
+

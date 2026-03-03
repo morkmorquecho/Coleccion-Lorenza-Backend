@@ -168,7 +168,7 @@ class CheckoutViewTest(OrderTestBase):
 
         resp = self.client.post(self.URL, self._checkout_payload(), format="json")
 
-        payment = Order.objects.get(id=resp.data["order_id"]).payment_set.first()
+        payment = Order.objects.get(id=resp.data["order_id"]).payments.first()
         self.assertIsNotNone(payment)
         self.assertEqual(payment.external_id, "pi_abc123")
         self.assertEqual(payment.status, "pending")

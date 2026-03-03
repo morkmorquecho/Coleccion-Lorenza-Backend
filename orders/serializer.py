@@ -1,19 +1,12 @@
 from datetime import date
-
 from rest_framework import serializers
-
 from pieces.models import Piece
 from users.models import Address
-from .models import CouponUsage, Order, OrderItem, Payment, ShippingTracking
-
-
+from .models import CouponUsage, Order, OrderItem, Payment, ShippingTracking, Coupon
 
 class OrderItemInputSerializer(serializers.Serializer):
     piece = serializers.PrimaryKeyRelatedField(queryset=Piece.objects.all())
     quantity = serializers.IntegerField(min_value=1)
-
-
-from orders.models import Coupon  # adjust import path
 
 class CheckoutSerializer(serializers.Serializer):
     address = serializers.PrimaryKeyRelatedField(queryset=Address.objects.all())
@@ -51,3 +44,33 @@ class CheckoutSerializer(serializers.Serializer):
             raise serializers.ValidationError("Ya usaste este cupón anteriormente.")
 
         return coupon  
+    
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = '__all__'
+
+class CouponUsageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CouponUsage
+        fields = '__all__'
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = '__all__'
+        exclude = ['external_id'] 
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True, source='items')
+    coupons = CouponUsageSerializer(many=True, read_only=True, source='coupon_usage')
+    payments = PaymentSerializer(many=True, read_only=True, source='payments')
+
+    class Meta:
+        model = Order
+        fields = '__all__'
+
+class ShippingTrackingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShippingTracking
+        fields = '__all__'

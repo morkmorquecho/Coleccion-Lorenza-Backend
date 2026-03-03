@@ -82,15 +82,18 @@ class ShippingTracking(BaseModel):
         verbose_name = ("Rastreo de pedido")
         verbose_name_plural = ("Rastreo de pedidos")   
 
-    def __str__(self):
-        return f"{self.carrier.upper()} - {self.tracking_number} ({self.status})"
-
 
     def get_tracking_url(self):
         url_template = TRACKING_URLS.get(self.carrier.lower())
         if url_template:
             return url_template.format(self.tracking_number)
         return None
+    
+    def get_owner_id(self):
+        return self.order.user_id
+
+    def __str__(self):
+        return f"{self.carrier.upper()} - {self.tracking_number} ({self.status})"
     
 class Payment(BaseModel):
     STATUS_CHOICES = [

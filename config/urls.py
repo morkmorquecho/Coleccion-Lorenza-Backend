@@ -25,6 +25,7 @@ from drf_spectacular.views import (
 from users.urls import users_patterns
 from pieces.urls import pieces_patterns
 from orders.urls import orders_patterns
+from blog.urls import blog_patterns
 
 def trigger_error(request):
     division_by_zero = 1 / 0
@@ -33,7 +34,8 @@ api_v1_patterns = [
     path('auth/', include(authentications_patterns)),
     path('users/', include(users_patterns)),
     path('', include(pieces_patterns)),
-    path('', include(orders_patterns))
+    path('', include(orders_patterns)),
+    path('', include(blog_patterns)),
 ]
 
 urlpatterns = [

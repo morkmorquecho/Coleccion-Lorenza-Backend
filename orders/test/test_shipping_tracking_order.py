@@ -376,7 +376,7 @@ class TestShippingTrackingList(OrderTestMixin, APITestCase):
     # IsOwner lanza 401 para usuarios no autenticados.
     def test_unauthenticated_returns_401(self):
         self.logout()
-        response = self.client.get(reverse("shipping-tracking-list"))  # ← correcto
+        response = self.client.get(reverse("shipping-tracking-list"))  #  correcto
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_user_sees_only_own_trackings(self):

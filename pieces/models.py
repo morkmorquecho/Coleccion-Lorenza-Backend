@@ -8,7 +8,7 @@ from core.mixins import ImagenPKMixin
 from core.models import BaseModel
 from core.utils.storages import borrar_archivo_storage
 from core.utils.validations import validate_date_range
-from pieces.utils import upload_piece_image, upload_pieces_thumb
+from pieces.utils import uplaod_intro_video, upload_piece_image, upload_pieces_thumb
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
@@ -39,6 +39,7 @@ class Section(BaseModel):
 
 class Piece(ImagenPKMixin, BaseModel):
     thumbnail_path = models.ImageField(upload_to=upload_pieces_thumb)
+    intro_video = models.FileField(upload_to=uplaod_intro_video, blank=True, null=True)
     title = models.CharField(max_length=100, unique=True)
     slug = models.CharField(blank=True, null=True, unique=True, max_length=100)
     description = models.TextField()
@@ -85,6 +86,7 @@ class Piece(ImagenPKMixin, BaseModel):
         return self.title
 
 class Discount(BaseModel):
+    name = models.CharField(max_length=50, default='pendiente de nombrar')
     percentage = models.DecimalField( max_digits=3, decimal_places=1, validators=[MinValueValidator(0.1)])
     start_date = models.DateField()
     end_date = models.DateField()

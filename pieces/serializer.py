@@ -37,6 +37,7 @@ class PieceSerializer(serializers.ModelSerializer):
             "slug",
             "description",
             "thumbnail_path",
+            "intro_video",
             "quantity",
             "price_base",
             "width",

@@ -474,39 +474,42 @@ class SoftDeleteAdminMixin:
         self.message_user(request, f"{queryset.count()} registro(s) desactivados.")
     action_deactivate.short_description = "Desactivar registros seleccionados"
 
+
 class ImagenPKMixin:
     """
-    Mixin para modelos que tienen ImageFields y necesitan
+    Mixin para modelos que tienen ImageFields y/o FileFields y necesitan
     que el archivo se nombre usando el PK del objeto.
     
     Uso:
         class pieces(ImagenPKMixin, models.Model):
             imagen = models.ImageField(...)
+            documento = models.FileField(...)
         
-        # Si tienes varios ImageFields:
+        # Si tienes varios ImageFields/FileFields:
         class pieces(ImagenPKMixin, models.Model):
             imagen_principal = models.ImageField(...)
             imagen_secundaria = models.ImageField(...)
+            archivo = models.FileField(...)
     """
 
-    def _get_image_fields(self):
-        """Detecta automáticamente todos los ImageFields del modelo."""
-        from django.db.models import ImageField
+    def _get_file_fields(self):
+        """Detecta automáticamente todos los ImageFields y FileFields del modelo."""
+        from django.db.models import FileField  # ImageField hereda de FileField
         return [
             f.attname for f in self._meta.get_fields()
-            if isinstance(f, ImageField)
+            if isinstance(f, FileField)
         ]
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            imagenes_temporales = {}
-            for field_name in self._get_image_fields():
-                imagenes_temporales[field_name] = getattr(self, field_name)
+            archivos_temporales = {}
+            for field_name in self._get_file_fields():
+                archivos_temporales[field_name] = getattr(self, field_name)
                 setattr(self, field_name, None)
 
             with transaction.atomic():
                 super().save(*args, **kwargs)
-                for field_name, valor in imagenes_temporales.items():
+                for field_name, valor in archivos_temporales.items():
                     setattr(self, field_name, valor)
                 kwargs.pop('force_insert', None)
                 super().save(*args, **kwargs)

@@ -432,6 +432,12 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'orders': {  
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        
     },
 }
 

@@ -3,7 +3,7 @@ from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
 
 from core.utils.storages import borrar_archivo_storage
-from .models import Piece, PiecePhoto
+from .models import Piece, PiecePhoto, Review
 
 
 #=========================================== THUMBNAIL_PATH - PIECE ===========================================
@@ -122,3 +122,22 @@ def borrar_imagen_photo_anterior_al_actualizar(sender, instance, **kwargs):
 
     if _archivo_cambio(instance, anterior, 'image_path'):
         borrar_archivo_storage(anterior.image_path)
+
+#========================= PHOTO - REVIEW ========================================
+
+@receiver(post_delete, sender=Review)
+def borrar_review_photo_al_eliminar(sender, instance, **kwargs):
+    borrar_archivo_storage(instance.photo)
+
+
+@receiver(pre_save, sender=Review)
+def borrar_review_photo_anterior_al_actualizar(sender, instance, **kwargs):
+    if not instance.pk:
+        return
+    try:
+        anterior = Review.objects.get(pk=instance.pk)
+    except Review.DoesNotExist:
+        return
+
+    if _archivo_cambio(instance, anterior, 'photo'):
+        borrar_archivo_storage(anterior.photo)

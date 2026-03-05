@@ -26,3 +26,10 @@ def upload_piece_image(instance, filename):
     # Usa el PK de la pieza padre para la carpeta
     piece_pk = instance.piece_id if instance.piece_id else 'temp'
     return f"pieces/{piece_pk}/{identificador}{ext}"
+
+def upload_review_image(instance, filename):
+    ext = os.path.splitext(filename)[1].lower()
+    identificador = instance.pk if instance.pk else uuid.uuid4().hex
+    review_pk = instance.piece_id if instance.piece_id else 'temp'
+    return f"pieces/reviews/{review_pk}/{identificador}{ext}"
+

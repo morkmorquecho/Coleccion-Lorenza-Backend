@@ -1,8 +1,9 @@
 from django.utils import timezone
 from decimal import Decimal
-from pieces.models import Piece, PieceDiscount, PiecePhoto, Section, TypePiece
+from pieces.models import Piece, PieceDiscount, PiecePhoto, Review, Section, TypePiece
 from rest_framework import serializers
-
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 class TypePieceSerializer(serializers.ModelSerializer):
     class Meta:
         model = TypePiece
@@ -157,3 +158,17 @@ class PieceDiscountSerializer(serializers.ModelSerializer):
     class Meta:
         model = PieceDiscount
         fields = ['id','piece' ,'percentage']    
+
+class ReviewSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Review
+        fields = '__all__'
+        read_only_fields = ['user']
+
+    def create(self, validated_data):
+        try:
+            return super().create(validated_data)
+        except DjangoValidationError as e:
+            raise DRFValidationError(e.message_dict)

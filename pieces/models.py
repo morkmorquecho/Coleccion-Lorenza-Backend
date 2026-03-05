@@ -10,9 +10,10 @@ from core.models import BaseModel
 from core.utils.storages import borrar_archivo_storage
 from core.utils.validations import validate_date_range
 from django.apps import apps
-from pieces.utils import uplaod_intro_video, upload_piece_image, upload_pieces_thumb
+from pieces.utils import uplaod_intro_video, upload_piece_image, upload_pieces_thumb, upload_review_image
 from django.core.validators import MinValueValidator, MaxValueValidator
 
+from django.core.exceptions import ValidationError
 
 class TypePiece(BaseModel):
     type = models.CharField(max_length=100, unique=True)
@@ -167,16 +168,17 @@ class ShippingRate(BaseModel):
     def __str__(self):
         return f"{self.region} - {self.kg}kg: ${self.cost}"
 
-class Review(BaseModel):
+class Review(ImagenPKMixin,BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     piece = models.ForeignKey(Piece, on_delete=models.CASCADE)
+    comment = models.TextField(blank=True, null=True)
+    photo = models.ImageField(upload_to=upload_review_image, blank=True, null=True)
     rating = models.PositiveSmallIntegerField(
         validators=[
             MinValueValidator(1),
             MaxValueValidator(5)
         ]
     )
-    comment = models.TextField(blank=True, null=True)
     
     class Meta:
         verbose_name = 'Reseña'
@@ -191,7 +193,10 @@ class Review(BaseModel):
             piece=self.piece,
             order__status__in=['paid', 'shipped']
         ).exists()
-
+        
+        if not has_purchased:
+            raise ValidationError("Solo puedes reseñar piezas que hayas comprado.")
+        
     def save(self, *args, **kwargs):
         self.full_clean() 
         super().save(*args, **kwargs)

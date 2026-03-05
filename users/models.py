@@ -1,7 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
 from core.models import BaseModel 
-from django.core.validators import RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
+from django.core.exceptions import ValidationError
+
+from pieces.models import Piece
 
 phone_regex = RegexValidator(
     regex=r'^\+?1?\d{9,15}$',
@@ -34,3 +37,20 @@ class Address(BaseModel):
 
     def __str__(self):
         return f"{self.street} {self.street_number}, {self.city}"
+
+class WishList(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    piece = models.ForeignKey(Piece, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    class Meta:
+        verbose_name = 'Lista de favorito'
+        verbose_name_plural = 'Lista de favoritos'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user} fav: {self.piece.title}'
+    
+

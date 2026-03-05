@@ -4,10 +4,12 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.utils import timezone
+from auth.adapters import User
 from core.mixins import ImagenPKMixin
 from core.models import BaseModel
 from core.utils.storages import borrar_archivo_storage
 from core.utils.validations import validate_date_range
+from django.apps import apps
 from pieces.utils import uplaod_intro_video, upload_piece_image, upload_pieces_thumb
 from django.core.validators import MinValueValidator, MaxValueValidator
 
@@ -164,3 +166,36 @@ class ShippingRate(BaseModel):
 
     def __str__(self):
         return f"{self.region} - {self.kg}kg: ${self.cost}"
+
+class Review(BaseModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    piece = models.ForeignKey(Piece, on_delete=models.CASCADE)
+    rating = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(5)
+        ]
+    )
+    comment = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Reseña'
+        verbose_name_plural = 'Reseñas'
+
+
+    def clean(self):
+        OrderItem = apps.get_model('orders', 'OrderItem')
+
+        has_purchased = OrderItem.objects.filter(
+            order__user=self.user,
+            piece=self.piece,
+            order__status__in=['paid', 'shipped']
+        ).exists()
+
+    def save(self, *args, **kwargs):
+        self.full_clean() 
+        super().save(*args, **kwargs)
+
+
+    def __str__(self):
+        return f'reseña de {self.user} a {self.piece.title}'

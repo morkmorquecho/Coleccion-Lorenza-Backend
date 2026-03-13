@@ -12,6 +12,7 @@ from django.contrib.auth import authenticate, get_user_model
 from auth.base import BaseAuthenticationView, BaseJWTView
 from auth.docs.schemas import LOGIN_SCHEMA, LOGOUT, TOKEN_REFRESH, TOKEN_VERIFY
 from auth.serializers import CustomTokenObtainPairSerializer
+from auth.services import UsersRegisterService
 from config.throttling import LoginThrottle
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
@@ -20,6 +21,7 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from core.responses.messages import AuthMessages
 from auth.base import BaseAuthenticationView
+from core.services.email_service import ConfirmUserEmail
 
 User = get_user_model()
 _MODULE_PATH = 'auth.views.jwt_views'
@@ -49,43 +51,56 @@ class LoginView(BaseJWTView, GenericAPIView):
         email = request.data.get('email')
         password = request.data.get('password')
 
-        # Validar password
         if not password:
-            return Response(
-                AuthMessages.PASSWORDL_REQUIRED,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response(AuthMessages.PASSWORDL_REQUIRED, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validar username o email
         if not username and not email:
-            return Response(
-                AuthMessages.EMAIL_USERNAMEL_REQUIRED,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response(AuthMessages.EMAIL_USERNAMEL_REQUIRED, status=status.HTTP_400_BAD_REQUEST)
 
-        user = None
-
-        # Autenticación por email
-        if email:
-            try:
+        user_obj = None
+        try:
+            if email:
                 user_obj = User.objects.get(email=email)
-                user = authenticate(
-                    request=request,
-                    username=user_obj.username,
-                    password=password
-                )
-            except User.DoesNotExist:
-                pass
+            elif username:
+                user_obj = User.objects.get(username=username)
+        except User.DoesNotExist:
+            pass
 
-        # Autenticación por username
+        
+        if user_obj and not user_obj.is_active:
+            if user_obj.check_password(password):  
+                if user_obj.last_login is None:
+                    self.log_auth_event(
+                        'jwt_login_failed',
+                        user=None,
+                        success=False,
+                        reason='Intento de login, Cuenta INACTIVA',
+                        ip=request.META.get('REMOTE_ADDR')
+                    )
+                    confirm_url = UsersRegisterService.get_confirmation_url(user_obj, request)
+                    ConfirmUserEmail.send_email(
+                        to_email=user_obj.email,
+                        confirm_url=confirm_url,
+                        nombre=user_obj.username
+                    )
+                    self.logger.info(f'Re-enviado email de confirmación a {user_obj.username} - {user_obj.email}')
+                else:
+                    self.log_auth_event(
+                        'jwt_login_failed',
+                        user=None,
+                        success=False,
+                        reason='Intento de login, Cuenta BANEADA',
+                        ip=request.META.get('REMOTE_ADDR')
+                    )
+            return Response(AuthMessages.CREDENTIALS_INVALID, status=status.HTTP_401_UNAUTHORIZED)
+
+        
+        user = None
+        if email and user_obj:
+            user = authenticate(request=request, username=user_obj.username, password=password)
         if not user and username:
-            user = authenticate(
-                request=request,
-                username=username,
-                password=password
-            )
+            user = authenticate(request=request, username=username, password=password)
 
-        # Credenciales inválidas
         if not user:
             self.log_auth_event(
                 'jwt_login_failed',
@@ -94,21 +109,11 @@ class LoginView(BaseJWTView, GenericAPIView):
                 reason='Credenciales inválidas',
                 ip=request.META.get('REMOTE_ADDR')
             )
-            return Response(
-                AuthMessages.CREDENTIALS_INVALID,
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response(AuthMessages.CREDENTIALS_INVALID, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Generar tokens
+        
         response_data = self.generate_token_response(user)
-
-        # Log de éxito
-        self.log_auth_event(
-            'jwt_login_success',
-            user=user,
-            method='username_email'
-        )
-
+        self.log_auth_event('jwt_login_success', user=user, method='username_email')
         return Response(response_data, status=status.HTTP_200_OK)
 
 

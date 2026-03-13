@@ -22,14 +22,16 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView
 )
-from users.urls import user_path
+from users.urls import users_patterns
+from pieces.urls import pieces_patterns
 
 def trigger_error(request):
     division_by_zero = 1 / 0
 
 api_v1_patterns = [
     path('auth/', include(authentications_patterns)),
-    path('users/', include(user_path))
+    path('users/', include(users_patterns)),
+    path('', include(pieces_patterns))
 ]
 
 urlpatterns = [

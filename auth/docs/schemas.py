@@ -6,8 +6,8 @@ from core.responses.messages import AuthMessages, UserMessages
 from core.responses.schemas import UserResponses
 _MODULE_PATH_JWT = 'auth.views.jwt_views'
 _MODULE_PATH_SOCIAL = 'auth.views.oauth_views'
-_MODULE_PATH_PASSWORD = 'authentication.views.password_views'
-_MODULE_PATH_USER = 'authentication.views.user_views'
+_MODULE_PATH_PASSWORD = 'auth.views.password_views'
+_MODULE_PATH_USER = 'auth.views.user_views'
 #========================================== JWT VIEWS ================================================
 
 LOGIN_SCHEMA = extend_schema(
@@ -177,7 +177,7 @@ RESEND_TOKEN = extend_schema(
 
 VERIFY_EMAIL = extend_schema(
     summary="Verificar Cuenta/EMAIL",
-    tags=["users"],
+    tags=["auth"],
     description=(
         "Este endpoint se utiliza como metodo de seguridad para confirmas tokens provenientes de un correo\n\n"
         "Como el caso de confirmar el correo de un usuario despues de crearlo o modificar su correo \n\n"

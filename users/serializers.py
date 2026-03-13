@@ -1,7 +1,7 @@
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from allauth.account import app_settings as allauth_settings
 from django.contrib.auth.hashers import check_password
-
+from .models import Address
 from rest_framework import serializers
 
 class CustomRegisterSerializer(RegisterSerializer):
@@ -30,3 +30,44 @@ class EmailUpdateSerializer(serializers.Serializer):
             })
         
         return data
+    
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = [
+            'id', 'recipient_name', 'country', 'state', 'city',
+            'postal_code', 'neighborhood', 'street', 'street_number',
+            'phone_number', 'reference', 'apartment_number', 'is_default',
+            'created_at', 'updated_at',
+        ]
+
+    def validate(self, attrs):
+        request = self.context['request']
+        user = request.user
+
+        is_default = attrs.get('is_default', False)
+
+        if is_default:
+            qs = Address.objects.filter(user=user, is_default=True)
+
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+
+            if qs.exists():
+                raise serializers.ValidationError({
+                    "is_default": "El usuario ya tiene una dirección predeterminada."
+                })
+
+        return attrs
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        if validated_data.get('is_default'):
+            Address.objects.filter(user=user, is_default=True).update(is_default=False)
+        return Address.objects.create(user=user, **validated_data)
+
+    def update(self, instance, validated_data):
+        user = self.context['request'].user
+        if validated_data.get('is_default'):
+            Address.objects.filter(user=user, is_default=True).exclude(pk=instance.pk).update(is_default=False)
+        return super().update(instance, validated_data)

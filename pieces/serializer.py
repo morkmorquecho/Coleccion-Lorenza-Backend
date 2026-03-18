@@ -29,6 +29,7 @@ class PieceSerializer(serializers.ModelSerializer):
     has_discount = serializers.SerializerMethodField()
     discount_percentage = serializers.SerializerMethodField()
     final_price_base = serializers.SerializerMethodField()
+    original_price_base = serializers.SerializerMethodField()  
 
     class Meta:
         model = Piece
@@ -56,6 +57,7 @@ class PieceSerializer(serializers.ModelSerializer):
             "has_discount",
             "discount_percentage",
             "final_price_base",
+            "original_price_base",
         ]
 
     def _get_active_discount(self, obj):
@@ -90,6 +92,8 @@ class PieceSerializer(serializers.ModelSerializer):
     def get_final_price_base(self, obj) -> float:
         return self._apply_discount(obj.get_final_price('MX'), self._get_active_discount(obj))
 
+    def get_original_price_base(self, obj) -> float:
+        return obj.get_final_price('MX')
     
 class PiecePhotoSerializer(serializers.ModelSerializer):
     class Meta:

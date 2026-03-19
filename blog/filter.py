@@ -11,5 +11,5 @@ class BlogFilter(django_filters.FilterSet):
 
     def filter_recent(self, queryset, name, value):
         if value:
-            return queryset.order_by('-created_at')[:10]
+            return queryset.order_by('-published_at')[:10]
         return queryset

@@ -110,5 +110,18 @@ class BaseModel(models.Model):
         """Verifica si el registro está eliminado"""
         return self.deleted_at is not None
     
+    def get_owner_id(self):
+        """
+        Retorna el ID del usuario propietario del objeto.
+        Por defecto busca el campo 'user_id' directamente en el modelo.
+        Sobrescribir en modelos donde el owner esté en una relación anidada.
+        """
+        if hasattr(self, 'user_id'):
+            return self.user_id
+        raise NotImplementedError(
+            f"{self.__class__.__name__} debe implementar `get_owner_id()` "
+            f"o tener un campo `user` directo."
+        )
+
     def __str__(self):
         return f"{self.__class__.__name__} - {self.pk}"

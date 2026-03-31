@@ -49,6 +49,8 @@ class ShippingTrackingInline(SoftDeleteAdminMixin, admin.TabularInline):
 @admin.register(Coupon)
 class CouponAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
+        "id",
+        "is_active",
         "code",
         "percentage",
         "valid_from",
@@ -64,6 +66,7 @@ class CouponAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 class OrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
+        "is_active",
         "user",
         "total",
         "status",
@@ -80,6 +83,7 @@ class OrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 class OrderItemAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
+        "is_active",
         "order",
         "piece",
         "quantity",
@@ -93,6 +97,8 @@ class OrderItemAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 @admin.register(ShippingTracking)
 class ShippingTrackingAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
+        "id",
+        "is_active",
         "order",
         "carrier",
         "tracking_number",
@@ -118,6 +124,8 @@ class ShippingTrackingAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 @admin.register(Payment)
 class PaymentAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
+        "id",
+        "is_active",
         "order",
         "amount",
         "payment_method",
@@ -132,6 +140,8 @@ class PaymentAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 @admin.register(CouponUsage)
 class CouponUsageAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
+        "id",
+        "is_active",
         "order",
         "coupon",
         "user",

@@ -1,11 +1,13 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
+from rest_framework import generics
 from rest_framework.generics import UpdateAPIView, GenericAPIView
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from core.mixins import SentryErrorHandlerMixin, ViewSetSentryMixin
 from core.permission import IsOwner
 from core.responses.messages import UserMessages
-from users.docs.schemas import ADDRESS_SET_DEFAULT, ADDRESS_VIEWSET, EMAIL_UPDATE
-from users.serializers import EmailUpdateSerializer, AddressSerializer
+from pieces.models import Piece
+from users.docs.schemas import ADDRESS_SET_DEFAULT, ADDRESS_VIEWSET, EMAIL_UPDATE, WISHLIST_VIEWSET
+from users.serializers import EmailUpdateSerializer, AddressSerializer, WishListSerializer
 from auth.services import UsersRegisterService
 from core.services.email_service import ConfirmUserEmail,UpdateUserEmail
 from django.contrib.auth import get_user_model
@@ -14,7 +16,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse
 from rest_framework.decorators import action
-from .models import Address
+from .models import Address, WishList
 _MODULE_PATH = __name__
 
 User = get_user_model()
@@ -72,3 +74,37 @@ class AddressViewSet(ViewSetSentryMixin, viewsets.ModelViewSet):
         address.is_default = True
         address.save(update_fields=['is_default'])
         return Response(self.get_serializer(address).data)
+    
+@WISHLIST_VIEWSET
+class WishListViewSet(ViewSetSentryMixin, viewsets.ModelViewSet):
+    serializer_class = WishListSerializer
+    permission_classes = [IsAuthenticated]
+
+    http_method_names = ['get', 'post', 'delete', 'head', 'options'] 
+
+    def get_queryset(self):
+        return WishList.objects.filter(
+            user=self.request.user,
+            is_active=True
+        ).select_related('piece')
+
+    def perform_create(self, serializer):
+        piece = serializer.validated_data['piece']
+        
+        existing = WishList.objects.filter(
+            user=self.request.user,
+            piece=piece,
+            is_active = False,
+        ).first()
+
+        if existing:
+            existing.is_active = True
+            existing.save(update_fields=['is_active'])
+        else:
+            serializer.save(user=self.request.user, is_active=True)
+
+    def destroy(self, request, pk=None):
+        wishlist_item = get_object_or_404(WishList, user=request.user, piece_id=pk)
+        wishlist_item.is_active = False
+        wishlist_item.save(update_fields=['is_active'])
+        return Response(status=status.HTTP_204_NO_CONTENT)

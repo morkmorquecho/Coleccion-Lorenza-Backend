@@ -32,10 +32,10 @@ class Order(BaseModel):
         ('shipped', 'Shipped'),
         ('cancelled', 'Cancelled'),
     ]
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     total = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
+    address = models.ForeignKey(Address, on_delete=models.CASCADE, related_name='orders')
 
     class Meta:
         verbose_name = ("Pedido")
@@ -47,8 +47,8 @@ class Order(BaseModel):
 
 class OrderItem(BaseModel):
 
-    piece = models.ForeignKey(Piece, on_delete=models.CASCADE)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    piece = models.ForeignKey(Piece, on_delete=models.CASCADE, related_name='orders_items')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     quantity = models.IntegerField()
     price_snapshot = models.DecimalField(max_digits=10, decimal_places=2)
 
@@ -71,9 +71,9 @@ class ShippingTracking(BaseModel):
         ('ups', 'UPS'),
         ('fedex', 'FedEx'),
     ]
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    carrier = models.CharField(max_length=50, choices=CARRIER_CHOICES)
-    tracking_number = models.CharField(max_length=100)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='trakings')
+    carrier = models.CharField(max_length=50, choices=CARRIER_CHOICES, default='fedex')
+    tracking_number = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     shipped_at = models.DateTimeField (null=True, blank=True)
     delivered_at = models.DateTimeField (null=True, blank=True)
@@ -82,9 +82,6 @@ class ShippingTracking(BaseModel):
         verbose_name = ("Rastreo de pedido")
         verbose_name_plural = ("Rastreo de pedidos")   
 
-    def __str__(self):
-        return f"{self.carrier.upper()} - {self.tracking_number} ({self.status})"
-
 
     def get_tracking_url(self):
         url_template = TRACKING_URLS.get(self.carrier.lower())
@@ -92,13 +89,19 @@ class ShippingTracking(BaseModel):
             return url_template.format(self.tracking_number)
         return None
     
+    def get_owner_id(self):
+        return self.order.user_id
+
+    def __str__(self):
+        return f"{self.carrier.upper()} - {self.tracking_number} ({self.status})"
+    
 class Payment(BaseModel):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('completed', 'Completed'),
         ('failed', 'Failed'),
     ]
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=50)
     external_id = models.CharField(max_length=250)
@@ -112,9 +115,9 @@ class Payment(BaseModel):
         return f"Pago {self.id} - {self.order} - {self.status}"
 
 class CouponUsage(BaseModel):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='coupon_usage')
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, related_name='usages')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='coupon_usage')
     discount_applied = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:

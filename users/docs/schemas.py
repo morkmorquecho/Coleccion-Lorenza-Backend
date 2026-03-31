@@ -5,7 +5,7 @@ from auth.docs.request import GOOGLE_LOGIN_REQUEST, RESEND_CONFIRMATION_EMAIL_RE
 from auth.docs.response import LOGIN_RESPONSE
 from core.responses.messages import AuthMessages, UserMessages
 from core.responses.schemas import UserResponses
-from ..serializers import AddressSerializer
+from ..serializers import AddressSerializer, WishListSerializer
 _MODULE_PATH = 'auth.views' 
 
 EMAIL_UPDATE = extend_schema(
@@ -127,4 +127,66 @@ ADDRESS_SET_DEFAULT = extend_schema(
         200: AddressSerializer,
         404: OpenApiResponse(description="Dirección no encontrada."),
     }
+)
+
+WISHLIST_VIEWSET = extend_schema_view(
+    list=extend_schema(
+        summary="Listar Favoritos",
+        tags=["users"],
+        description=(
+            "Retorna todas las piezas en la lista de favoritos del usuario autenticado.\n\n"
+            "Solo se retornan los items activos (`is_active=true`).\n\n"
+            "Cada item incluye el detalle completo de la pieza asociada.\n\n"
+            "Accesible para usuarios autenticados.\n\n"
+            f"**Code:** `{_MODULE_PATH}.WishListViewSet_list`"
+        ),
+        responses={
+            200: WishListSerializer,
+        }
+    ),
+    retrieve=extend_schema(
+        summary="Obtener Favorito",
+        tags=["users"],
+        description=(
+            "Retorna el detalle de un item específico de la lista de favoritos del usuario autenticado.\n\n"
+            "Solo el propietario del favorito puede acceder a este recurso.\n\n"
+            "Accesible para usuarios autenticados.\n\n"
+            f"**Code:** `{_MODULE_PATH}.WishListViewSet_retrieve`"
+        ),
+        responses={
+            200: WishListSerializer,
+            404: OpenApiResponse(description="Favorito no encontrado."),
+        }
+    ),
+    create=extend_schema(
+        summary="Agregar Favorito",
+        tags=["users"],
+        description=(
+            "Agrega una pieza a la lista de favoritos del usuario autenticado.\n\n"
+            "Si la pieza ya existía como favorito inactivo, se reactiva en lugar de crear un registro nuevo.\n\n"
+            "El campo `user` se asigna automáticamente al usuario autenticado.\n\n"
+            "Accesible para usuarios autenticados.\n\n"
+            f"**Code:** `{_MODULE_PATH}.WishListViewSet_create`"
+        ),
+        request=WishListSerializer,
+        responses={
+            201: WishListSerializer,
+            400: OpenApiResponse(description="Datos inválidos o pieza no encontrada."),
+        }
+    ),
+    destroy=extend_schema(
+        summary="Eliminar Favorito",
+        tags=["users"],
+        description=(
+            "Desactiva una pieza de la lista de favoritos del usuario autenticado.\n\n"
+            "El registro no se elimina físicamente de la base de datos, solo se marca como inactivo (`is_active=false`).\n\n"
+            "Solo el propietario del favorito puede ejecutar esta acción.\n\n"
+            "Accesible para usuarios autenticados.\n\n"
+            f"**Code:** `{_MODULE_PATH}.WishListViewSet_destroy`"
+        ),
+        responses={
+            204: OpenApiResponse(description="Favorito desactivado correctamente."),
+            404: OpenApiResponse(description="Favorito no encontrado."),
+        }
+    ),
 )

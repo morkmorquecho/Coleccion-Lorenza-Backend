@@ -2,7 +2,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiPara
 from drf_spectacular.types import OpenApiTypes
 
 from pieces.docs.params import PIECE_SLUG_PARAMETER
-from pieces.serializer import PieceDiscountSerializer, PiecePhotoBulkCreateSerializer, PiecePhotoBulkDeleteSerializer, PiecePhotoReorderSerializer, PiecePhotoSerializer, PieceSerializer, SectionSerializer, TypePieceSerializer
+from pieces.serializer import PieceDiscountSerializer, PiecePhotoBulkCreateSerializer, PiecePhotoBulkDeleteSerializer, PiecePhotoReorderSerializer, PiecePhotoSerializer, PieceSerializer, ReviewSerializer, SectionSerializer, TypePieceSerializer
 
 _MODULE_PATH_PIECES = "pieces.views"
 
@@ -335,6 +335,94 @@ SECTION_VIEWSET = extend_schema_view(
         responses={
             200: SectionSerializer,
             404: OpenApiResponse(description="Sección no encontrada."),
+        }
+    ),
+)
+
+
+REVIEW_VIEWSET = extend_schema_view(
+    list=extend_schema(
+        summary="Listar Reseñas",
+        tags=["pieces - reviews"],
+        description=(
+            "Retorna todas las reseñas activas.\n\n"
+            "Soporta filtros por `user`, `piece`, `rating`, `rating_min` y `rating_max`.\n\n"
+            "No requiere autenticación.\n\n"
+            f"**Code:** `{_MODULE_PATH_PIECES}.ReviewViewSet_list`"
+        ),
+        responses={200: ReviewSerializer(many=True)}
+    ),
+    retrieve=extend_schema(
+        summary="Obtener Reseña",
+        tags=["pieces - reviews"],
+        description=(
+            "Retorna el detalle de una reseña específica.\n\n"
+            "No requiere autenticación.\n\n"
+            f"**Code:** `{_MODULE_PATH_PIECES}.ReviewViewSet_retrieve`"
+        ),
+        responses={
+            200: ReviewSerializer,
+            404: OpenApiResponse(description="Reseña no encontrada."),
+        }
+    ),
+    create=extend_schema(
+        summary="Crear Reseña",
+        tags=["pieces - reviews"],
+        description=(
+            "Crea una reseña para una pieza.\n\n"
+            "El usuario se asigna automáticamente desde la sesión autenticada.\n\n"
+            "Solo se puede reseñar una pieza que haya sido comprada por el usuario.\n\n"
+            "Requiere autenticación.\n\n"
+            f"**Code:** `{_MODULE_PATH_PIECES}.ReviewViewSet_create`"
+        ),
+        responses={
+            201: ReviewSerializer,
+            400: OpenApiResponse(description="Datos inválidos o pieza no comprada."),
+            401: OpenApiResponse(description="No autenticado."),
+        }
+    ),
+    update=extend_schema(
+        summary="Actualizar Reseña",
+        tags=["pieces - reviews"],
+        description=(
+            "Actualiza todos los campos de una reseña existente.\n\n"
+            "Requiere autenticación de administrador.\n\n"
+            f"**Code:** `{_MODULE_PATH_PIECES}.ReviewViewSet_update`"
+        ),
+        responses={
+            200: ReviewSerializer,
+            400: OpenApiResponse(description="Datos inválidos."),
+            403: OpenApiResponse(description="No tiene permisos de administrador."),
+            404: OpenApiResponse(description="Reseña no encontrada."),
+        }
+    ),
+    partial_update=extend_schema(
+        summary="Actualizar Reseña Parcialmente",
+        tags=["pieces - reviews"],
+        description=(
+            "Actualiza uno o más campos de una reseña existente.\n\n"
+            "Requiere autenticación de administrador.\n\n"
+            f"**Code:** `{_MODULE_PATH_PIECES}.ReviewViewSet_partial_update`"
+        ),
+        responses={
+            200: ReviewSerializer,
+            400: OpenApiResponse(description="Datos inválidos."),
+            403: OpenApiResponse(description="No tiene permisos de administrador."),
+            404: OpenApiResponse(description="Reseña no encontrada."),
+        }
+    ),
+    destroy=extend_schema(
+        summary="Eliminar Reseña",
+        tags=["pieces - reviews"],
+        description=(
+            "Elimina una reseña específica.\n\n"
+            "Requiere autenticación de administrador.\n\n"
+            f"**Code:** `{_MODULE_PATH_PIECES}.ReviewViewSet_destroy`"
+        ),
+        responses={
+            204: OpenApiResponse(description="Reseña eliminada correctamente."),
+            403: OpenApiResponse(description="No tiene permisos de administrador."),
+            404: OpenApiResponse(description="Reseña no encontrada."),
         }
     ),
 )

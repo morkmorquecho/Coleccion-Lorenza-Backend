@@ -86,3 +86,6 @@ class ErrorMessages:
         UPLOAD_FAILED = "Error al subir el archivo"
         FILE_TOO_LARGE = "El archivo excede el tamaño permitido"
         INVALID_FILE_TYPE = "Tipo de archivo no permitido"
+
+    class WishList:
+        ALREADY_EXIST = 'Esta pieza ya está en tu lista de favoritos.'

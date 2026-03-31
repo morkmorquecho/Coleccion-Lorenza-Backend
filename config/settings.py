@@ -65,7 +65,7 @@ INSTALLED_APPS = [
     'reviews.apps.ReviewsConfig',
     'pieces.apps.PiecesConfig',
     'core',
-    
+    'cms.apps.CmsConfig',    
 ]
 
 
@@ -432,6 +432,12 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'orders': {  
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        
     },
 }
 

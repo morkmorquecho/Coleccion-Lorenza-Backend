@@ -455,3 +455,187 @@ class TestSetDefaultAction(AddressTestMixin, APITestCase):
     def test_set_default_on_nonexistent_address_returns_404(self):
         response = self.client.patch(self.set_default_url(9999))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+# tests/test_wishlist.py
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from django.contrib.auth import get_user_model
+from pieces.models import Piece
+from users.models import WishList
+import io
+from django.test import TestCase
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from rest_framework import status
+from rest_framework.test import APIClient
+from PIL import Image
+
+from pieces.models import Piece, TypePiece, Section
+
+User = get_user_model()
+
+def fake_image(name='test.jpg'):
+        """Genera una imagen JPEG real en memoria usando Pillow."""
+        img = Image.new('RGB', (10, 10), color=(255, 0, 0))
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG')
+        buf.seek(0)
+        return SimpleUploadedFile(name, buf.read(), content_type='image/jpeg')
+class WishListViewSetTest(APITestCase):
+
+    
+
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@test.com',
+            password='testpass123'
+        )
+        self.other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@test.com',
+            password='testpass123'
+        )
+        self.type_piece = TypePiece.objects.create(type='Escultura', key='escultura')
+        self.section = Section.objects.create(section='Tecnologia', key='tecnologia')
+        
+        self.piece = Piece.objects.create(
+                title='Nueva Pieza',
+                description='Descripción de prueba',
+                quantity=5,
+                price_base='100.00',
+                width='10.00',
+                height='20.00',
+                length='5.00',
+                weight='1.50',
+                type=self.type_piece,
+                section=self.section,
+                thumbnail_path=fake_image(),
+            )
+        self.piece2 = Piece.objects.create(
+                title='Nueva Pieza 2',
+                description='Descripción de prueba 2',
+                quantity=3,
+                price_base='200.00',
+                width='10.00',
+                height='20.00',
+                length='5.00',
+                weight='1.50',
+                type=self.type_piece,
+                section=self.section,
+                thumbnail_path=fake_image('test2.jpg'),
+            )
+
+        self.list_url = reverse('user:wishlist-list')
+
+    def detail_url(self, pk):
+        return reverse('user:wishlist-detail', args=[pk])
+
+    # ── AUTH ──────────────────────────────────────────────────────────────────
+
+    def test_unauthenticated_cannot_access(self):
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    # ── CREATE ────────────────────────────────────────────────────────────────
+
+    def test_create_wishlist_item(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.list_url, {'piece_id': self.piece.id})
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(WishList.objects.filter(user=self.user, piece=self.piece).exists())
+
+    def test_create_reactivates_inactive_item(self):
+        """Si el item existe pero está inactivo, lo reactiva en lugar de crear uno nuevo"""
+        self.client.force_authenticate(user=self.user)
+        wishlist_item = WishList.objects.create(
+            user=self.user,
+            piece=self.piece,
+            is_active=False
+        )
+
+        response = self.client.post(self.list_url, {'piece_id': self.piece.id})
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        wishlist_item.refresh_from_db()
+        self.assertTrue(wishlist_item.is_active)
+        self.assertEqual(WishList.objects.filter(user=self.user, piece=self.piece).count(), 1)
+
+    def test_create_with_invalid_piece(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.list_url, {'piece_id': 99999})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    # ── LIST ──────────────────────────────────────────────────────────────────
+
+    def test_list_returns_only_active_items(self):
+        self.client.force_authenticate(user=self.user)
+        WishList.objects.create(user=self.user, piece=self.piece, is_active=True)
+        WishList.objects.create(user=self.user, piece=self.piece2, is_active=False)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get('results', response.data)  # soporta con y sin paginación
+        self.assertEqual(len(results), 1)
+
+    def test_list_returns_only_own_items(self):
+        self.client.force_authenticate(user=self.user)
+        WishList.objects.create(user=self.user, piece=self.piece, is_active=True)
+        WishList.objects.create(user=self.other_user, piece=self.piece2, is_active=True)
+
+        response = self.client.get(self.list_url)
+
+        results = response.data.get('results', response.data)
+        self.assertEqual(len(results), 1)
+
+    def test_list_response_includes_piece_detail(self):
+        self.client.force_authenticate(user=self.user)
+        WishList.objects.create(user=self.user, piece=self.piece, is_active=True)
+
+        response = self.client.get(self.list_url)
+
+        results = response.data.get('results', response.data)
+        self.assertIn('piece', results[0])
+        self.assertEqual(results[0]['piece']['title'], self.piece.title)
+
+    # ── DELETE ────────────────────────────────────────────────────────────────
+
+    def test_delete_deactivates_item(self):
+        """DELETE no borra el registro, solo desactiva is_active"""
+        self.client.force_authenticate(user=self.user)
+        item = WishList.objects.create(user=self.user, piece=self.piece, is_active=True)
+
+        response = self.client.delete(self.detail_url(item.id))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        item.refresh_from_db()
+        self.assertFalse(item.is_active)
+        self.assertTrue(WishList.objects.filter(id=item.id).exists())  # sigue en BD
+
+    def test_delete_other_users_item_returns_404(self):
+        """Un usuario no puede desactivar el favorito de otro"""
+        self.client.force_authenticate(user=self.user)
+        item = WishList.objects.create(user=self.other_user, piece=self.piece, is_active=True)
+
+        response = self.client.delete(self.detail_url(item.id))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    # ── MÉTODOS NO PERMITIDOS ─────────────────────────────────────────────────
+
+    def test_put_not_allowed(self):
+        self.client.force_authenticate(user=self.user)
+        item = WishList.objects.create(user=self.user, piece=self.piece, is_active=True)
+        response = self.client.put(self.detail_url(item.id), {})
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_patch_not_allowed(self):
+        self.client.force_authenticate(user=self.user)
+        item = WishList.objects.create(user=self.user, piece=self.piece, is_active=True)
+        response = self.client.patch(self.detail_url(item.id), {})
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)

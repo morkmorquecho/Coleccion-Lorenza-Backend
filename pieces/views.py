@@ -3,14 +3,15 @@ from rest_framework.response import Response
 from rest_framework import viewsets
 from django.utils.text import slugify
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
+from django_filters.rest_framework import DjangoFilterBackend
 
 from core.mixins import ViewSetSentryMixin
-from pieces.docs.schemas import PIECE_DISCOUNT_VIEWSET, PIECE_PHOTO_VIEWSET, PIECE_VIEWSET, SECTION_VIEWSET, TYPE_PIECE_VIEWSET
-from .models import PieceDiscount, PiecePhoto, TypePiece, Section
-from core.permission import IsAdminOrReadOnly
-from pieces.filters import PieceFilter
+from pieces.docs.schemas import PIECE_DISCOUNT_VIEWSET, PIECE_PHOTO_VIEWSET, PIECE_VIEWSET, REVIEW_VIEWSET, SECTION_VIEWSET, TYPE_PIECE_VIEWSET
+from .models import PieceDiscount, PiecePhoto, Review, TypePiece, Section
+from core.permission import IsAdminOrAuthenticatedCreate, IsAdminOrReadOnly
+from pieces.filters import PieceFilter, ReviewFilter
 from pieces.models import Piece
-from pieces.serializer import PieceDiscountSerializer, PiecePhotoBulkCreateSerializer, PiecePhotoBulkDeleteSerializer, PiecePhotoReorderSerializer, PiecePhotoSerializer, PieceSerializer, TypePieceSerializer, SectionSerializer
+from pieces.serializer import PieceDiscountSerializer, PiecePhotoBulkCreateSerializer, PiecePhotoBulkDeleteSerializer, PiecePhotoReorderSerializer, PiecePhotoSerializer, PieceSerializer, ReviewSerializer, TypePieceSerializer, SectionSerializer
 from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -197,3 +198,15 @@ class SectionViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
     serializer_class = SectionSerializer
     lookup_field = "key"
     permission_classes = [IsAdminOrReadOnly]
+
+@REVIEW_VIEWSET
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAdminOrAuthenticatedCreate]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ReviewFilter  
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+

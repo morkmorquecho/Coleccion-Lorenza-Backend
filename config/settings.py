@@ -65,7 +65,7 @@ INSTALLED_APPS = [
     'reviews.apps.ReviewsConfig',
     'pieces.apps.PiecesConfig',
     'core',
-    
+    'cms.apps.CmsConfig',    
 ]
 
 

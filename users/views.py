@@ -42,7 +42,7 @@ class EmailUpdateAPIView(SentryErrorHandlerMixin, GenericAPIView):
             )
         
         # Si es un email nuevo, enviar confirmación
-        confirm_url = UsersRegisterService.get_confirmation_url(user, request, email)
+        confirm_url = UsersRegisterService.get_confirmation_url(user, email)
         UpdateUserEmail.send_email(
             to_email=email,
             confirm_url=confirm_url,

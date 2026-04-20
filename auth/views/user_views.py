@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from auth.docs.schemas import REGISTRATION, RESEND_TOKEN, VERIFY_EMAIL, VERIFY_USER
 from auth.serializers import ResendTokenSerializer, UserCreateSerializer, VerifyEmailSerializer
 from core.mixins import SentryErrorHandlerMixin, ViewSetSentryMixin
-from config.throttling import RegisterThrottle, SensitiveOperationThrottle
+from config.throttling import RegisterThrottle, RegisterValidThrottle, SensitiveOperationThrottle
 from auth.docs.request import RESEND_CONFIRMATION_EMAIL_REQUEST
 from core.responses.messages import UserMessages
 from core.services.email_service import ConfirmUserEmail
@@ -32,7 +32,7 @@ _MODULE_PATH = __name__
 class RegistrationAPIView(SentryErrorHandlerMixin,CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = UserCreateSerializer
-    throttle_classes =  [RegisterThrottle]
+    throttle_classes =  [RegisterThrottle, RegisterValidThrottle]
 
     
     def post(self, request, *args, **kwargs):
@@ -53,9 +53,10 @@ class RegistrationAPIView(SentryErrorHandlerMixin,CreateAPIView):
     def _post(self, request, *args, **kwargs):        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        request._is_valid = True
         user = serializer.save(is_active=False)  
 
-        confirm_url= UsersRegisterService.get_confirmation_url(user, request)                    
+        confirm_url= UsersRegisterService.get_confirmation_url(user)                    
 
         ConfirmUserEmail.send_email(
             to_email=user.email, 
@@ -74,7 +75,7 @@ class RegistrationAPIView(SentryErrorHandlerMixin,CreateAPIView):
 @RESEND_TOKEN
 class ResendTokenAPIView(SentryErrorHandlerMixin, CreateAPIView):
     permission_classes = [AllowAny]
-    throttle_classes =  [SensitiveOperationThrottle]
+    throttle_classes =  [SensitiveOperationThrottle, RegisterValidThrottle]
     serializer_class = ResendTokenSerializer
     
     def post(self, request, *args, **kwargs):
@@ -95,7 +96,8 @@ class ResendTokenAPIView(SentryErrorHandlerMixin, CreateAPIView):
     def _post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True) 
-        
+        request._is_valid = True  
+
         email = serializer.validated_data['email']
 
         try:
@@ -112,7 +114,7 @@ class ResendTokenAPIView(SentryErrorHandlerMixin, CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        confirm_url= UsersRegisterService.get_confirmation_url(user, request)                    
+        confirm_url= UsersRegisterService.get_confirmation_url(user)                    
         
         ConfirmUserEmail.send_email(
             to_email=user.email, 
@@ -193,6 +195,13 @@ class VerifyEmailAPIView(SentryErrorHandlerMixin, APIView):
         )
 
         return Response(
-            {"message": UserMessages.NEW_EMAIL},
+            {"message": UserMessages.NEW_EMAIL,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+            }},
             status=status.HTTP_200_OK
         )

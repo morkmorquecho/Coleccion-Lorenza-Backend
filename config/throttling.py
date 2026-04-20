@@ -22,3 +22,14 @@ class BurstRateThrottle(UserRateThrottle):
         Se aplica tanto a usuarios autenticados como anónimos
         """
         return super().allow_request(request, view)
+    
+class RegisterValidThrottle(AnonRateThrottle):
+    scope = 'register_valid'
+
+    def allow_request(self, request, view):
+        self.request = request
+        return True 
+
+    def throttle_success(self):
+        if getattr(self.request, "_is_valid", False):
+            return super().throttle_success()

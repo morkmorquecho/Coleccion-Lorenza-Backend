@@ -11,8 +11,10 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 from django.contrib.auth import authenticate, get_user_model
 from auth.base import BaseAuthenticationView, BaseJWTView
 from auth.docs.schemas import LOGIN_SCHEMA, LOGOUT, TOKEN_REFRESH, TOKEN_VERIFY
-from auth.serializers import CustomTokenObtainPairSerializer
-from auth.services import UsersRegisterService
+from auth.serializers import CustomTokenObtainPairSerializer, LoginSerializer
+from auth.services import LoginService, UsersRegisterService
+from core.docs.schema_utils import auto_schema
+from core.services.email_service import ConfirmUserEmail
 from config.throttling import LoginThrottle
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
@@ -21,17 +23,16 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from core.responses.messages import AuthMessages
 from auth.base import BaseAuthenticationView
-from core.services.email_service import ConfirmUserEmail
 
+from django.contrib.auth import get_user_model
 User = get_user_model()
-_MODULE_PATH = 'auth.views.jwt_views'
 
-
-@LOGIN_SCHEMA
+@auto_schema(**LOGIN_SCHEMA)
 class LoginView(BaseJWTView, GenericAPIView):
     """Vista de login personalizada con soporte para username o email"""
     permission_classes = [AllowAny]
     throttle_classes = [LoginThrottle]
+    serializer_class = LoginSerializer
     sentry_operation_name = "jwt_login"
 
     def post(self, request, *args, **kwargs):
@@ -47,86 +48,48 @@ class LoginView(BaseJWTView, GenericAPIView):
         )
 
     def _jwt_login(self, request, *args, **kwargs):
-        username = request.data.get('username')
-        email = request.data.get('email')
-        password = request.data.get('password')
+        serializer = LoginSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if not password:
-            return Response(AuthMessages.PASSWORDL_REQUIRED, status=status.HTTP_400_BAD_REQUEST)
+        data     = serializer.validated_data
+        username = data.get('username')
+        email    = data.get('email')
+        password = data.get('password')
+        ip       = request.META.get('REMOTE_ADDR')
 
-        if not username and not email:
-            return Response(AuthMessages.EMAIL_USERNAMEL_REQUIRED, status=status.HTTP_400_BAD_REQUEST)
+        user_obj = LoginService.get_user_by_credential(username=username, email=email)
 
-        user_obj = None
-        try:
-            if email:
-                user_obj = User.objects.get(email=email)
-            elif username:
-                user_obj = User.objects.get(username=username)
-        except User.DoesNotExist:
-            pass
-
+        if LoginService.check_provider_only_account(user_obj):
+            return Response(AuthMessages.USE_PROVIDER_OR_SET_PASSWORD, status=status.HTTP_401_UNAUTHORIZED)
         
-        if user_obj and not user_obj.is_active:
-            if user_obj.check_password(password):  
-                if user_obj.last_login is None:
-                    self.log_auth_event(
-                        'jwt_login_failed',
-                        user=None,
-                        success=False,
-                        reason='Intento de login, Cuenta INACTIVA',
-                        ip=request.META.get('REMOTE_ADDR')
-                    )
-                    confirm_url = UsersRegisterService.get_confirmation_url(user_obj, request)
-                    ConfirmUserEmail.send_email(
-                        to_email=user_obj.email,
-                        confirm_url=confirm_url,
-                        nombre=user_obj.username
-                    )
-                    self.logger.info(f'Re-enviado email de confirmación a {user_obj.username} - {user_obj.email}')
-                else:
-                    self.log_auth_event(
-                        'jwt_login_failed',
-                        user=None,
-                        success=False,
-                        reason='Intento de login, Cuenta BANEADA',
-                        ip=request.META.get('REMOTE_ADDR')
-                    )
-            return Response(AuthMessages.CREDENTIALS_INVALID, status=status.HTTP_401_UNAUTHORIZED)
+        inactive = LoginService.check_inactive_user(user_obj, password, ip) if user_obj else None
+        if inactive:
+            self.log_auth_event('jwt_login_failed', user=None, success=False,
+                                reason=inactive['reason'], ip=ip)
+            return Response(inactive['response'], status=status.HTTP_401_UNAUTHORIZED)
 
-        
-        user = None
-        if email and user_obj:
-            user = authenticate(request=request, username=user_obj.username, password=password)
-        if not user and username:
-            user = authenticate(request=request, username=username, password=password)
-
+        user = LoginService.authenticate_user(request, user_obj=user_obj,
+                                            username=username, password=password)
         if not user:
-            self.log_auth_event(
-                'jwt_login_failed',
-                user=None,
-                success=False,
-                reason='Credenciales inválidas',
-                ip=request.META.get('REMOTE_ADDR')
-            )
+            self.log_auth_event('jwt_login_failed', user=None, success=False,
+                                reason='Credenciales inválidas', ip=ip)
             return Response(AuthMessages.CREDENTIALS_INVALID, status=status.HTTP_401_UNAUTHORIZED)
 
-        
         response_data = self.generate_token_response(user)
         self.log_auth_event('jwt_login_success', user=user, method='username_email')
         return Response(response_data, status=status.HTTP_200_OK)
 
-
-@TOKEN_REFRESH
+@auto_schema(**TOKEN_REFRESH)
 class TokenRefreshView(TokenRefreshView):
     pass
 
 
-@TOKEN_VERIFY
+@auto_schema(**TOKEN_VERIFY)
 class TokenVerifyView(TokenVerifyView):
     pass
 
 
-@LOGOUT
+@auto_schema(**LOGOUT)
 class LogoutView(TokenBlacklistView):
     pass

@@ -5,9 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from auth.adapters import User
-from core.mixins import ImagenPKMixin
 from core.models import BaseModel
-from core.utils.storages import borrar_archivo_storage
 from core.utils.validations import validate_date_range
 from django.apps import apps
 from pieces.utils import uplaod_intro_video, upload_piece_image, upload_pieces_thumb, upload_review_image
@@ -40,7 +38,7 @@ class Section(BaseModel):
         return f"{self.section} ({self.key})"
     
 
-class Piece(ImagenPKMixin, BaseModel):
+class Piece( BaseModel):
     thumbnail_path = models.ImageField(upload_to=upload_pieces_thumb)
     intro_video = models.FileField(upload_to=uplaod_intro_video, blank=True, null=True)
     title = models.CharField(max_length=100, unique=True)
@@ -126,7 +124,7 @@ class PieceDiscount(BaseModel):
         return f"{self.piece.title} - {self.discount.percentage}%"
 
 
-class PiecePhoto(ImagenPKMixin, BaseModel):
+class PiecePhoto( BaseModel):
     piece = models.ForeignKey(Piece, on_delete=models.CASCADE, related_name="photos")
     image_path = models.ImageField(upload_to=upload_piece_image)
     position = models.IntegerField(
@@ -138,11 +136,6 @@ class PiecePhoto(ImagenPKMixin, BaseModel):
         verbose_name_plural = 'Fotos de las piezas'
         unique_together = ('piece', 'position')
         ordering = ['position'] 
-
-    def delete(self, using=None, keep_parents=False, hard=False):
-        """PiecePhoto siempre hace hard delete para respetar el unique_together."""
-        borrar_archivo_storage(self.image_path)
-        super().delete(using=using, keep_parents=keep_parents, hard=True)
 
     def clean(self):
         if not self.pk:
@@ -168,7 +161,7 @@ class ShippingRate(BaseModel):
     def __str__(self):
         return f"{self.region} - {self.kg}kg: ${self.cost}"
 
-class Review(ImagenPKMixin,BaseModel):
+class Review(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     piece = models.ForeignKey(Piece, on_delete=models.CASCADE)
     comment = models.TextField(blank=True, null=True)

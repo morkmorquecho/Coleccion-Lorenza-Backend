@@ -1,10 +1,11 @@
 from django.db import models
 from blog.utils import upload_image_blog
-from core.mixins import ImagenPKMixin
 from core.models import BaseModel
 from pieces.models import Piece, Section
+import uuid
 
-class Blog(ImagenPKMixin, BaseModel):
+class Blog( BaseModel):
+    storage_id = models.UUIDField(default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True)
     content = models.TextField()

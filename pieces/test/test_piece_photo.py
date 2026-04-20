@@ -5,7 +5,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 
 from pieces.models import Piece, PiecePhoto, TypePiece, Section  # ajusta los imports reales
-from users.models import User  # ajusta al path real de tu modelo de usuario
+from django.contrib.auth import get_user_model
+User = get_user_model()  # ajusta al path real de tu modelo de usuario
 
 
 # ──────────────────────────────────────────────

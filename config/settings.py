@@ -163,7 +163,7 @@ REST_AUTH = {
 # =============================================== ALL AUTH  ========================================
 ACCOUNT_LOGIN_METHODS = ["email"]
 
-ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'password2*']
+ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'confirm_password*']
 
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_UNIQUE_EMAIL = True
@@ -173,7 +173,7 @@ ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = '/login/'
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 
 SOCIALACCOUNT_AUTO_SIGNUP = True
-
+SOCIALACCOUNT_ADAPTER = 'config.adapters.CustomSocialAccountAdapter'
 
 #=============================================== SOCIALACCOUNT_PROVIDERS DE ALLAUTH ===============================================
 SOCIALACCOUNT_PROVIDERS = {
@@ -212,10 +212,11 @@ if config('ACTIVE_RATES', default=False, cast=bool):
             'anon': '35/hour',
             'user': '500/hour',
             'login': '5/hour',
-            'register': '3/hour',
+            'register': '30/hour',
             'sensitive': '5/hour',
             'heavy': '20/hour',
-            'burst': '30/min',
+            'burst': '20/min',
+            'register_valid':'3/hour'
     }
 else:
     DEFAULT_THROTTLE_CLASSES = (
@@ -231,6 +232,7 @@ else:
             'sensitive': '995/hour',
             'heavy': '9920/hour',
             'burst': '9930/min',
+            'register_valid':'9993/hour'
     }
 
 

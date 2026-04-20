@@ -24,7 +24,8 @@ class UserMessages:
 class AuthMessages:
     # Success messages
     CONFIRM_NEW_PASSWORD = "Contraseña restablecida con éxito."
-    
+    PASSWORD_MISMATCH = "Las contraseñas no coinciden."
+
     # Error messages
     PASSWORDL_REQUIRED = 'el campo password es requerido'
     EMAIL_USERNAMEL_REQUIRED = 'Debe proporcionar username o email'

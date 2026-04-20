@@ -1,14 +1,15 @@
 # signals.py
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
-from core.utils.storages import archivo_campo_cambio, borrar_archivo_storage
+from core.utils.storages import delete_file_fields, delete_if_changed
 from .models import Piece, PiecePhoto, Review
 
 #========================= PIECE =============================
+CAMPOS_PIECE = ['thumbnail_path', 'intro_video']
+
 @receiver(post_delete, sender=Piece)
 def borrar_archivos_piece_al_eliminar(sender, instance, **kwargs):
-    borrar_archivo_storage(instance.thumbnail_path)
-    borrar_archivo_storage(instance.intro_video)
+    delete_file_fields(instance, CAMPOS_PIECE)
 
 
 @receiver(pre_save, sender=Piece)
@@ -20,23 +21,23 @@ def borrar_archivos_piece_al_actualizar(sender, instance, **kwargs):
     except Piece.DoesNotExist:
         return
 
+    # Si se desactiva la pieza, borrar todos sus archivos y fotos
     if anterior.is_active and not instance.is_active:
-        borrar_archivo_storage(anterior.thumbnail_path)
-        borrar_archivo_storage(anterior.intro_video)
+        delete_file_fields(anterior, CAMPOS_PIECE)
         for photo in instance.photos.all():
             photo.delete()
         return
 
-    if archivo_campo_cambio(instance, anterior, 'thumbnail_path'):
-        borrar_archivo_storage(anterior.thumbnail_path)
+    # Borrar archivos solo si cambiaron
+    delete_if_changed(anterior, instance, CAMPOS_PIECE)
 
-    if archivo_campo_cambio(instance, anterior, 'intro_video'):
-        borrar_archivo_storage(anterior.intro_video)
 
 #========================= IMAGE_PATH - PIECE PHOTO ========================================
+CAMPOS_PIECE_PHOTO = ['image_path']
+
 @receiver(post_delete, sender=PiecePhoto)
 def borrar_imagen_photo_al_eliminar(sender, instance, **kwargs):
-    borrar_archivo_storage(instance.image_path)
+    delete_file_fields(instance, CAMPOS_PIECE_PHOTO)
 
 
 @receiver(pre_save, sender=PiecePhoto)
@@ -48,14 +49,15 @@ def borrar_imagen_photo_anterior_al_actualizar(sender, instance, **kwargs):
     except PiecePhoto.DoesNotExist:
         return
 
-    if archivo_campo_cambio(instance, anterior, 'image_path'):
-        borrar_archivo_storage(anterior.image_path)
+    delete_if_changed(anterior, instance, CAMPOS_PIECE_PHOTO)
+
 
 #========================= PHOTO - REVIEW ========================================
+CAMPOS_REVIEW = ['photo']
 
 @receiver(post_delete, sender=Review)
 def borrar_review_photo_al_eliminar(sender, instance, **kwargs):
-    borrar_archivo_storage(instance.photo)
+    delete_file_fields(instance, CAMPOS_REVIEW)
 
 
 @receiver(pre_save, sender=Review)
@@ -67,5 +69,4 @@ def borrar_review_photo_anterior_al_actualizar(sender, instance, **kwargs):
     except Review.DoesNotExist:
         return
 
-    if archivo_campo_cambio(instance, anterior, 'photo'):
-        borrar_archivo_storage(anterior.photo)
+    delete_if_changed(anterior, instance, CAMPOS_REVIEW)

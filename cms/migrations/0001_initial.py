@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                 'ordering': ['-created_at'],
                 'abstract': False,
             },
-            bases=(core.mixins.ImagenPKMixin, models.Model),
+            bases=(models.Model,),
         ),
         migrations.CreateModel(
             name='Collection',
@@ -48,7 +48,7 @@ class Migration(migrations.Migration):
                 'ordering': ['-created_at'],
                 'abstract': False,
             },
-            bases=(core.mixins.ImagenPKMixin, models.Model),
+            bases=(models.Model,),
         ),
         migrations.CreateModel(
             name='ImageCollection',
@@ -67,6 +67,6 @@ class Migration(migrations.Migration):
                 'ordering': ['-created_at'],
                 'abstract': False,
             },
-            bases=(core.mixins.ImagenPKMixin, models.Model),
+            bases=(models.Model,),
         ),
     ]

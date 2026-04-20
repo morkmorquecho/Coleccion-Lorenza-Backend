@@ -8,7 +8,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 
 from pieces.models import Piece, PieceDiscount, Discount, TypePiece, Section
-from users.models import User  # ajusta al path real
+from django.contrib.auth import get_user_model
+User = get_user_model()  # ajusta al path real
 
 
 # ──────────────────────────────────────────────

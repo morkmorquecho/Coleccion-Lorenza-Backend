@@ -34,6 +34,6 @@ class Migration(migrations.Migration):
                 'ordering': ['-created_at'],
                 'abstract': False,
             },
-            bases=(core.mixins.ImagenPKMixin, models.Model),
+            bases=(models.Model,),
         ),
     ]

@@ -1,7 +1,9 @@
 from django.test import TestCase
 
+# Create your tests here.
+# auth/tests/test_jwt_views.py
 from django.test import TestCase
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError  # ← Importar de DRF
 from rest_framework.test import APIClient
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -141,8 +143,7 @@ class PasswordResetConfirmViewTests(TestCase):
         response = self.client.post(self.url, {
             'uidb64': 'fake_uid_base64',
             'token': 'fake_valid_token',
-            'new_password': 'newpass123',
-            'confirm_new_password': 'newpass123'
+            'new_password': 'newpass123'
         })
         self.assertEqual(response.status_code, 200)
         mock_confirm_reset.assert_called_once()
@@ -176,7 +177,9 @@ class PasswordResetConfirmViewTests(TestCase):
     
 # auth/tests.py
 from django.test import TestCase
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 from rest_framework.test import APIClient
 from rest_framework import status
 from unittest.mock import patch, MagicMock
@@ -194,7 +197,7 @@ class RegistrationAPIViewTests(TestCase):
             'username': 'testuser',
             'email': 'test@example.com',
             'password': 'SecurePass123!',
-            'confirm_password': 'SecurePass123!'
+            'password2': 'SecurePass123!'
         }
     
     @patch('core.services.email_service.ConfirmUserEmail.send_email')
@@ -261,7 +264,7 @@ class RegistrationAPIViewTests(TestCase):
     def test_registro_passwords_no_coinciden(self):
         """Passwords diferentes retornan error"""
         data = self.valid_data.copy()
-        data['confirm_password'] = 'DifferentPass123!'
+        data['password2'] = 'DifferentPass123!'
         
         response = self.client.post(self.url, data)
         
@@ -363,7 +366,7 @@ class VerifyEmailAPIViewTests(TestCase):
     
     def setUp(self):
         self.client = APIClient()
-        self.url = '/api/v1/auth/email/verify/'  # Ajusta según tu URL
+        self.url = '/api/v1/auth/verify/'  # Ajusta según tu URL
         self.inactive_user = User.objects.create_user(
             username='testuser',
             email='old@example.com',
@@ -471,7 +474,7 @@ class RegistrationIntegrationTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.register_url = '/api/v1/auth/register/'
-        self.confirm_url = '/api/v1/auth/email/verify/'
+        self.confirm_url = '/api/v1/auth/verify/'
         self.resend_url = '/api/v1/auth/resend-token/'
     
     @patch('core.services.email_service.ConfirmUserEmail.send_email')
@@ -488,7 +491,7 @@ class RegistrationIntegrationTests(TestCase):
             'username': 'newuser',
             'email': 'new@example.com',
             'password': 'SecurePass123!',
-            'confirm_password': 'SecurePass123!'
+            'password2': 'SecurePass123!'
         }
         
         response = self.client.post(self.register_url, register_data)
@@ -520,7 +523,7 @@ class RegistrationIntegrationTests(TestCase):
             'username': 'newuser',
             'email': 'new@example.com',
             'password': 'SecurePass123!',
-            'confirm_password': 'SecurePass123!'
+            'password2': 'SecurePass123!'
         }
         
         self.client.post(self.register_url, register_data)

@@ -1,11 +1,8 @@
 import os
 import uuid
 
+from core.utils.upload_images import generate_upload_path
+
 
 def upload_image_blog(instance, filename):
-    ext = os.path.splitext(filename)[1].lower()  
-    
-    identificador = instance.pk if instance.pk else uuid.uuid4().hex
-    
-    nuevo_nombre = f"{identificador}{ext}"
-    return f"blog/{nuevo_nombre}"
+    return generate_upload_path('blog', instance, filename, purpose='thumbnail')

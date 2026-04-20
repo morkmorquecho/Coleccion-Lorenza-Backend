@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                 'ordering': ['-created_at'],
                 'abstract': False,
             },
-            bases=(core.mixins.ImagenPKMixin, models.Model),
+            bases=(models.Model,),
         ),
         migrations.CreateModel(
             name='PieceDiscount',
@@ -90,7 +90,7 @@ class Migration(migrations.Migration):
                 'ordering': ['-created_at'],
                 'abstract': False,
             },
-            bases=(core.mixins.ImagenPKMixin, models.Model),
+            bases=(models.Model,),
         ),
         migrations.DeleteModel(
             name='Pieces',

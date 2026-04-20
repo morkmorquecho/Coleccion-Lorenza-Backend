@@ -2,14 +2,16 @@ from typing import Collection
 
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
-from core.utils.storages import borrar_archivo_storage, archivo_campo_cambio
+from core.utils.storages import delete_file_fields, delete_if_changed
 from .models import Carousel, ImageCollection
 
 
 # ========================= CAROUSEL =============================
+CAMPOS_CAROUSEL = ['img']
+
 @receiver(post_delete, sender=Carousel)
 def borrar_archivos_carousel_al_eliminar(sender, instance, **kwargs):
-    borrar_archivo_storage(instance.img)
+    delete_file_fields(instance, CAMPOS_CAROUSEL)
 
 
 @receiver(pre_save, sender=Carousel)
@@ -21,13 +23,16 @@ def borrar_archivos_carousel_al_actualizar(sender, instance, **kwargs):
     except Carousel.DoesNotExist:
         return
 
-    if archivo_campo_cambio(instance, anterior, 'img'):
-        borrar_archivo_storage(anterior.img)
+    delete_if_changed(anterior, instance, CAMPOS_CAROUSEL)
+
 
 # ========================= COLLECTION =============================
+CAMPOS_COLLECTION = ['thumbnail_path']
+
 @receiver(post_delete, sender=Collection)
 def borrar_archivos_collection_al_eliminar(sender, instance, **kwargs):
-    borrar_archivo_storage(instance.thumbnail_path)
+    delete_file_fields(instance, CAMPOS_COLLECTION)
+
 
 @receiver(pre_save, sender=Collection)
 def borrar_archivos_collection_al_actualizar(sender, instance, **kwargs):
@@ -38,14 +43,15 @@ def borrar_archivos_collection_al_actualizar(sender, instance, **kwargs):
     except Collection.DoesNotExist:
         return
 
-    if archivo_campo_cambio(instance, anterior, 'thumbnail_path'):
-        borrar_archivo_storage(anterior.thumbnail_path)
+    delete_if_changed(anterior, instance, CAMPOS_COLLECTION)
 
 
 # ========================= IMAGE COLLECTION =============================
+CAMPOS_IMAGE_COLLECTION = ['image_path']
+
 @receiver(post_delete, sender=ImageCollection)
 def borrar_archivos_image_collection_al_eliminar(sender, instance, **kwargs):
-    borrar_archivo_storage(instance.image_path)
+    delete_file_fields(instance, CAMPOS_IMAGE_COLLECTION)
 
 
 @receiver(pre_save, sender=ImageCollection)
@@ -57,5 +63,4 @@ def borrar_archivos_image_collection_al_actualizar(sender, instance, **kwargs):
     except ImageCollection.DoesNotExist:
         return
 
-    if archivo_campo_cambio(instance, anterior, 'image_path'):
-        borrar_archivo_storage(anterior.image_path)
+    delete_if_changed(anterior, instance, CAMPOS_IMAGE_COLLECTION)

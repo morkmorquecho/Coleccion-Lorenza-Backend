@@ -27,6 +27,7 @@ pillow = "*"
 django-filter = "*"
 drf-nested-routers = "*"
 stripe = "*"
+google-auth = "*"
 
 [dev-packages]
 

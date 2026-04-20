@@ -1,12 +1,14 @@
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
-from core.utils.storages import borrar_archivo_storage, archivo_campo_cambio
+from core.utils.storages import delete_file_fields, delete_if_changed
 from .models import Blog
 
 # ========================= BLOG =============================
+CAMPOS_BLOG = ['cover_image']
+
 @receiver(post_delete, sender=Blog)
 def borrar_archivos_blog_al_eliminar(sender, instance, **kwargs):
-    borrar_archivo_storage(instance.cover_image)
+    delete_file_fields(instance, CAMPOS_BLOG)
 
 
 @receiver(pre_save, sender=Blog)
@@ -18,5 +20,4 @@ def borrar_archivos_blog_al_actualizar(sender, instance, **kwargs):
     except Blog.DoesNotExist:
         return
 
-    if archivo_campo_cambio(instance, anterior, 'cover_image'):
-        borrar_archivo_storage(anterior.cover_image)
+    delete_if_changed(anterior, instance, CAMPOS_BLOG)

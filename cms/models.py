@@ -4,11 +4,10 @@ from django.db import models
 from jsonschema import ValidationError
 
 from cms.utils import upload_image_carousel, upload_image_collection, validate_jpg, validate_year
-from core.mixins import ImagenPKMixin
 from core.models import BaseModel
 
 
-class Carousel(ImagenPKMixin, BaseModel):
+class Carousel( BaseModel):
     CAROUSEL_CHOICES = [
         (1, 'Primero'),
         (2, 'Segundo'),
@@ -38,7 +37,7 @@ class Carousel(ImagenPKMixin, BaseModel):
         verbose_name_plural = 'Carruseles'
 
 
-class Collection(ImagenPKMixin, BaseModel):
+class Collection( BaseModel):
     name = models.CharField(max_length=150, unique=True)
     description = models.TextField(blank=True, null=True)
     thumbnail_path = models.ImageField(upload_to=upload_image_collection)
@@ -62,7 +61,7 @@ class Collection(ImagenPKMixin, BaseModel):
         verbose_name_plural = 'Colecciones'
 
 
-class ImageCollection(ImagenPKMixin, BaseModel):
+class ImageCollection( BaseModel):
     collection = models.ForeignKey(
         Collection,
         on_delete=models.CASCADE,

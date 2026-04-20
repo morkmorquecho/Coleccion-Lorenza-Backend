@@ -6,6 +6,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import get_user_model
 
+from core.responses.messages import AuthMessages
+
 User = get_user_model()
 
 class PasswordResetRequestSerializer(serializers.Serializer):
@@ -15,6 +17,15 @@ class SetNewPasswordSerializer(serializers.Serializer):
     uidb64 = serializers.CharField()
     token = serializers.CharField()
     new_password = serializers.CharField(min_length=6, write_only=True)
+    confirm_new_password = serializers.CharField(min_length=6, write_only=True, trim_whitespace=False)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_new_password']:
+            raise serializers.ValidationError(
+                {'confirm_new_password': AuthMessages.PASSWORD_MISMATCH}
+            )
+        return attrs
+
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """Serializer que permite autenticación con username o email"""
@@ -55,28 +66,30 @@ class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True, required=True, 
         validators=[validate_password])
-    password2 = serializers.CharField(write_only=True, required=True)
+    confirm_password = serializers.CharField(write_only=True, required=True)
     
     class Meta:
         model = User
-        fields = ['username', 'password', 'password2', 'email']
+        fields = ['username', 'password', 'confirm_password', 'email']
         extra_kwargs = {
             'email': {'required': True}
         }
     
     def validate(self, attrs):
-        if attrs['password'] != attrs['password2']:
+        attrs['email'] = attrs['email'].lower().strip()
+
+        if attrs['password'] != attrs['confirm_password']:
             raise serializers.ValidationError({
                 "password": "Las contraseñas no coinciden."
             })
-        if User.objects.filter(email=attrs['email']).exists():
+        if User.objects.filter(email__iexact=attrs['email']).exists():
             raise serializers.ValidationError({
                 "email": "Este email ya está registrado."
             })
         return attrs
     
     def create(self, validated_data):
-        validated_data.pop('password2')
+        validated_data.pop('confirm_password')
         user = User.objects.create_user(**validated_data)
         return user
 

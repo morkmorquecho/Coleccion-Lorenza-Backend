@@ -13,8 +13,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from decouple import config
 from django.core.exceptions import ValidationError
 
-COMMISSION_STRIPE = config('COMMISSION_STRIPE')
-COMISSION_PROCESS_STRIPE = config('COMISSION_PROCESS_STRIPE')
+COMMISSION_STRIPE = Decimal(config('COMMISSION_STRIPE'))
+COMISSION_PROCESS_STRIPE = Decimal(config('COMISSION_PROCESS_STRIPE'))
 
 
 

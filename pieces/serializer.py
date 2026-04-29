@@ -41,7 +41,7 @@ class PieceSerializer(serializers.ModelSerializer):
             "thumbnail_path",
             "intro_video",
             "quantity",
-            "price_base",
+            "price_base", #PRECIO NETO DE LA PIEZA SIN ENVIO, NI COMISIONES
             "width",
             "height",
             "length",
@@ -52,48 +52,27 @@ class PieceSerializer(serializers.ModelSerializer):
             "type_id",    
             "section",    
             "section_id", 
+            "created_at",
             
             # calculados
             "has_discount",
             "discount_percentage",
-            "final_price_base",
-            "original_price_base",
+            "final_price_base", #PRECIO DE LA PIEZA FINAL YA CON COMISIONES, ENVIO Y DESCUENTOS
+            "original_price_base",#PRECIO DE LA PIEZA FINAL YA CON COMISIONES, ENVIO PEROOO SIN DESCUENTO PARA VISUALIZAR EN FRONT
         ]
 
-    def _get_active_discount(self, obj):
-        """Busca el descuento activo y lo cachea en el contexto del objeto."""
-        if not hasattr(obj, "_active_discount"):
-            today = timezone.now().date()
-            piece_discount = (
-                obj.discounts.filter(
-                    deleted_at__isnull=True,
-                    discount__start_date__lte=today,
-                    discount__end_date__gte=today,
-                )
-                .select_related("discount")
-                .first()
-            )
-            obj._active_discount = piece_discount.discount if piece_discount else None
-        return obj._active_discount
+    def get_final_price_base(self, obj) -> Decimal:
+        return obj.get_final_price('MX', apply_discount=True)
+
+    def get_original_price_base(self, obj) -> Decimal:
+        return obj.get_final_price('MX', apply_discount=False)
 
     def get_has_discount(self, obj) -> bool:
-        return self._get_active_discount(obj) is not None
+        return obj.get_active_discount() is not None
 
     def get_discount_percentage(self, obj) -> float | None:
-        discount = self._get_active_discount(obj)
+        discount = obj.get_active_discount()
         return discount.percentage if discount else None
-
-    def _apply_discount(self, price, discount):
-        if not discount:
-            return price
-        factor = 1 - (Decimal(discount.percentage) / Decimal("100"))
-        return round(price * factor, 2)
-
-    def get_final_price_base(self, obj) -> float:
-        return self._apply_discount(obj.get_final_price('MX'), self._get_active_discount(obj))
-
-    def get_original_price_base(self, obj) -> float:
-        return obj.get_final_price('MX')
     
 class PiecePhotoSerializer(serializers.ModelSerializer):
     class Meta:

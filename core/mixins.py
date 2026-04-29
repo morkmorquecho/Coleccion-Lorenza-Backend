@@ -185,7 +185,10 @@ class SentryErrorHandlerMixin:
             )
         
         # Re-lanzar para que DRF lo maneje
-        raise
+        return Response(
+            {'detail': exception.detail},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     
     def _handle_django_validation_error(self, exception, tags, extra):
         """Manejo de ValidationError de Django"""

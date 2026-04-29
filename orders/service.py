@@ -1,7 +1,7 @@
 from decimal import Decimal
 import logging
 import json
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from rest_framework.exceptions import ValidationError
 import stripe
 
@@ -12,11 +12,11 @@ from orders.models import CouponUsage, Order, OrderItem, Payment, ShippingTracki
 class OrderService():
     @staticmethod
     @transaction.atomic
-    def process_checkout(user, data) -> tuple[Order, str]:
+    def _create_order(user, data) -> tuple[Order, Payment]:
+        """Solo toca la BD. Si algo falla, rollback limpio."""
         items_data = data['items']
-        coupon = data.get('coupon_code') 
+        coupon = data.get('coupon_code')
 
-        # 1. Validar stock
         for item in items_data:
             piece = item['piece']
             if piece.quantity < item['quantity']:
@@ -24,17 +24,14 @@ class OrderService():
                     {'items': f'Stock insuficiente para "{piece.title}". Disponible: {piece.quantity}'}
                 )
 
-        # 2. Calcular total
-        subtotal = sum(item['piece'].get_final_price('mx') * item['quantity'] for item in items_data)
+        subtotal = sum((item['piece'].get_final_price('mx') - item['piece.piece_discounts']) * item['quantity'] for item in items_data)
 
-        # 3. Aplicar descuento si hay cupón
         discount = Decimal('0')
         if coupon:
             discount = (subtotal * coupon.percentage / Decimal('100')).quantize(Decimal('0.01'))
 
         total = subtotal - discount
 
-        # 4. Crear Order
         order = Order.objects.create(
             user=user,
             address=data['address'],
@@ -42,28 +39,22 @@ class OrderService():
             status='pending'
         )
 
-        # 5. Registrar uso del cupón
         if coupon:
             CouponUsage.objects.create(
-                order=order,
-                coupon=coupon,
-                user=user,
-                discount_applied=discount
+                order=order, coupon=coupon,
+                user=user, discount_applied=discount
             )
 
-        # 6. Crear OrderItems y descontar stock
         for item in items_data:
             piece = item['piece']
             OrderItem.objects.create(
-                order=order,
-                piece=piece,
+                order=order, piece=piece,
                 quantity=item['quantity'],
                 price_snapshot=piece.get_final_price('mx')
             )
             piece.quantity -= item['quantity']
             piece.save()
 
-        # 7. Crear Payment en pending
         payment = Payment.objects.create(
             order=order,
             amount=total,
@@ -72,25 +63,43 @@ class OrderService():
             status='pending'
         )
 
-        # 8. Crear intención de pago en Stripe
+        return order, payment
+
+
+    @staticmethod
+    def _create_stripe_intent(order: Order, payment: Payment, coupon, discount) -> str:
+        """Llama a Stripe FUERA del atomic. Si falla, la orden queda pending 
+        pero la BD ya está commiteada y el webhook no puede llegar antes."""
         payment_intent = stripe.PaymentIntent.create(
-            amount=int(total * 100),
+            amount=int(payment.amount * 100),
             currency='mxn',
             payment_method_types=['card'],
             metadata={
                 'order_id': str(order.id),
-                'user_id': str(user.id),
+                'user_id': str(order.user_id),
                 'coupon_code': coupon.code if coupon else '',
                 'discount_applied': str(discount),
             }
         )
 
-        # 9. Guardar el external_id que nos dio Stripe
         payment.external_id = payment_intent['id']
-        payment.save()
+        payment.save()  # Un solo save fuera del atomic, no hay riesgo
 
-        return order, payment_intent['client_secret']        
+        return payment_intent['client_secret']
 
+
+    @staticmethod
+    def process_checkout(user, data) -> tuple[Order, str]:
+        """Orquesta: primero BD (atomic), luego Stripe (fuera)."""
+        order, payment = OrderService._create_order(user, data)
+
+        client_secret = OrderService._create_stripe_intent(
+            order, payment,
+            coupon=data.get('coupon_code'),
+            discount=payment.amount  # ya calculado dentro
+        )
+
+        return order, client_secret
     @staticmethod
     @transaction.atomic
     def handle_payment_succeeded(payment_intent: dict, logger=None) -> None:
@@ -101,7 +110,8 @@ class OrderService():
                 external_id=payment_intent['id']
             )
         except Payment.DoesNotExist:
-            return
+            # Retornar 404/500 para que Stripe reintente el webhook
+            raise DatabaseError(f"Payment no encontrado: {payment_intent['id']}")
 
         if payment.status == 'completed':
             log.warning(
@@ -137,7 +147,7 @@ class OrderService():
                 external_id=payment_intent['id']
             )
         except Payment.DoesNotExist:
-            return
+            raise DatabaseError(f"Payment no encontrado: {payment_intent['id']}")
 
         if payment.status == 'failed':
             return  # ya fue procesado
@@ -168,7 +178,7 @@ class OrderService():
                 external_id=payment_intent['id']
             )
         except Payment.DoesNotExist:
-            return
+            raise DatabaseError(f"Payment no encontrado: {payment_intent['id']}")
 
         payment.status = 'failed'
         payment.save()

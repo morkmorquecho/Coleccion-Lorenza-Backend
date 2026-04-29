@@ -445,7 +445,7 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             "class": "rich.logging.RichHandler",
             'formatter': 'rich',
             'rich_tracebacks': True,   

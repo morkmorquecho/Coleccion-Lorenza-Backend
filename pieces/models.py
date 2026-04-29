@@ -8,10 +8,15 @@ from auth.adapters import User
 from core.models import BaseModel
 from core.utils.validations import validate_date_range
 from django.apps import apps
-from pieces.utils import uplaod_intro_video, upload_piece_image, upload_pieces_thumb, upload_review_image
+from pieces.utils import ceil_to_10, uplaod_intro_video, upload_piece_image, upload_pieces_thumb, upload_review_image
 from django.core.validators import MinValueValidator, MaxValueValidator
-
+from decouple import config
 from django.core.exceptions import ValidationError
+
+COMMISSION_STRIPE = config('COMMISSION_STRIPE')
+COMISSION_PROCESS_STRIPE = config('COMISSION_PROCESS_STRIPE')
+
+
 
 class TypePiece(BaseModel):
     type = models.CharField(max_length=100, unique=True)
@@ -45,7 +50,7 @@ class Piece( BaseModel):
     slug = models.CharField(blank=True, null=True, unique=True, max_length=100)
     description = models.TextField()
     
-    quantity = models.IntegerField()
+    quantity = models.PositiveIntegerField()
     price_base = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     width = models.DecimalField(max_digits=10, decimal_places=2)
@@ -64,27 +69,48 @@ class Piece( BaseModel):
     
     @property
     def volumetric_weight(self):
-        return max((self.width * self.height * self.weight) / 5000, 1)
+        return max((self.width * self.height * self.length) / 5000, 1)
 
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
 
-    def get_final_price(self, region: str) -> Decimal:
-        peso = math.ceil(self.volumetric_weight)  
+    def get_active_discount(self):
+        """Fuente de verdad del descuento. Usable desde cualquier capa."""
+        if not hasattr(self, '_active_discount_cache'):
+            today = timezone.now().date()
+            piece_discount = (
+                self.discounts
+                .filter(
+                    deleted_at__isnull=True,
+                    discount__start_date__lte=today,
+                    discount__end_date__gte=today,
+                )
+                .select_related('discount')
+                .first()
+            )
+            self._active_discount_cache = piece_discount.discount if piece_discount else None
+        return self._active_discount_cache
+
+    def get_final_price(self, region: str, apply_discount: bool = True) -> Decimal:
+        peso = max(math.ceil(self.volumetric_weight), self.weight)
 
         shipping = ShippingRate.objects.filter(
-            region=region.upper(),
-            kg=peso
+            region=region.upper(), kg=peso
         ).first()
 
-        if not shipping:
-            return self.price_base
+        subtotal = self.price_base + (shipping.cost if shipping else Decimal('0'))
 
-        return self.price_base + shipping.cost
-        
-    def __str__(self):
-        return self.title
+        if apply_discount:
+            discount = self.get_active_discount()
+            if discount:
+                factor = 1 - (Decimal(discount.percentage) / Decimal('100'))
+                subtotal = round(subtotal * factor, 2)
+
+        commission_stripe = (subtotal * (COMMISSION_STRIPE / Decimal('100'))) + Decimal('3')
+        iva = commission_stripe * Decimal('0.16')
+
+        return Decimal(ceil_to_10(subtotal + commission_stripe + iva))
 
 class Discount(BaseModel):
     name = models.CharField(max_length=50, default='pendiente de nombrar')
@@ -140,7 +166,7 @@ class PiecePhoto( BaseModel):
     def clean(self):
         if not self.pk:
             count = PiecePhoto.objects.filter(piece=self.piece).count()
-            if count >= 10:
+            if count >= 8:
                 raise ValidationError("Una pieza no puede tener más de 10 fotos.")
 
 

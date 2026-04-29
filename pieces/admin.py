@@ -45,7 +45,7 @@ class PiecePhotoInline(SoftDeleteAdminMixin, admin.TabularInline):
     model = PiecePhoto
     extra = 1
     readonly_fields = ("created_at",)
-    fields = ("is_active","image_path", "created_at")
+    fields = ("is_active","image_path", "position","created_at")
 
 
 @admin.register(Discount)
@@ -67,7 +67,7 @@ class PieceDiscountAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 
 @admin.register(PiecePhoto)
 class PiecePhotoAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
-    list_display = ("is_active", "piece", "image_path", "created_at")
+    list_display = ("is_active", "piece", "image_path", "position","created_at")
     list_select_related = ("piece",)
     search_fields = ("piece__title",)
 

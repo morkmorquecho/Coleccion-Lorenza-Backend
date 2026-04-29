@@ -33,3 +33,9 @@ def upload_review_image(instance, filename):
     review_pk = instance.piece_id if instance.piece_id else 'temp'
     return f"pieces/reviews/{review_pk}/{identificador}{ext}"
 
+
+#===========================================================
+import math
+
+def ceil_to_10(value):
+    return math.ceil(value / 10) * 10

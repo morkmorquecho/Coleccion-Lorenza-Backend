@@ -1,11 +1,13 @@
 from decimal import Decimal
+import traceback
 
 import stripe
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
-
+from django.utils import timezone
+from .models import Coupon
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -63,45 +65,50 @@ class CheckoutView(SentryErrorHandlerMixin, APIView):
             'client_secret': client_secret,   # el frontend lo usa para mostrar el formulario de Stripe
             'publishable_key': settings.STRIPE_PUBLISHABLE_KEY
         }, status=status.HTTP_201_CREATED)
-
+    
 @STRIPE_WEBHOOK_VIEW
 @method_decorator(csrf_exempt, name='dispatch')
 class StripeWebhookView(SentryErrorHandlerMixin, APIView):
-    """
-    Stripe llama a este endpoint cuando un pago se completa o falla.
-    No requiere autenticación porque viene de Stripe, pero se valida la firma.
-    """
     permission_classes = [AllowAny]
     throttle_classes = [SensitiveOperationThrottle]
+    sentry_operation_name = "stripe_webhook"
+    authentication_classes = [] 
 
     def post(self, request):
+        return self.handle_with_sentry(
+            operation=self._process_webhook,
+            request=request,
+            tags={'feature': 'webhook'},
+        )
+
+    def _process_webhook(self, request):
         payload = request.body
         sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
 
-        # Verificar que el evento realmente viene de Stripe
         try:
-            event = stripe.Webhook.construct_event(...)
+            event = stripe.Webhook.construct_event(
+                payload,
+                sig_header,
+                settings.STRIPE_WEBHOOK_SECRET
+            )
         except ValueError:
             self.logger.warning("Webhook payload inválido")
             return Response({'error': 'Payload inválido'}, status=400)
         except stripe.error.SignatureVerificationError:
             self.logger.warning("Firma de webhook inválida")
             return Response({'error': 'Firma inválida'}, status=400)
-        
+
         self.logger.info("Webhook recibido", extra={"event_type": event['type']})
 
         event_type = event['type']
 
         if event_type == 'payment_intent.succeeded':
             OrderService.handle_payment_succeeded(event['data']['object'], logger=self.logger)
-
         elif event_type == 'payment_intent.payment_failed':
             OrderService.handle_payment_failed(event['data']['object'], logger=self.logger)
-        
         elif event_type == 'payment_intent.canceled':
             OrderService.handle_payment_canceled(event['data']['object'], logger=self.logger)
 
-        # Stripe espera un 200, si no reintenta el evento
         return Response({'status': 'ok'}, status=200)
 
 @CANCEL_ORDER_VIEW
@@ -158,3 +165,30 @@ class ShippingTrackingViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
         
         return ShippingTracking.objects.filter(order__user_id=user.id)
 
+
+class ValidateCouponView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        code = request.query_params.get('code', '').strip().upper()
+
+        if not code:
+            return Response(
+                {'detail': 'El parámetro code es requerido.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            today = timezone.now().date()
+            coupon = Coupon.objects.get(
+                code=code,
+                valid_from__lte=today,
+                valid_until__gte=today
+            )
+        except Coupon.DoesNotExist:
+            return Response(
+                {'detail': 'Cupón no válido o expirado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response({'percentage': coupon.percentage})

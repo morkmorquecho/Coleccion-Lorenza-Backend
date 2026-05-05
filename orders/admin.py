@@ -7,6 +7,7 @@ from django.utils.html import format_html
 from core.mixins import SoftDeleteAdminMixin
 from .models import (
     Coupon,
+    ExchangeRate,
     Order,
     OrderItem,
     ShippingTracking,
@@ -150,3 +151,20 @@ class CouponUsageAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     )
     list_filter = ("coupon", "created_at")
     search_fields = ("order__id", "coupon__code", "user__username")
+
+@admin.register(ExchangeRate)
+class ExchangeRateAdmin(admin.ModelAdmin):
+    list_display = ("usd_to_mxn", "fetched_at", "source")
+    list_filter = ("source", "fetched_at")
+    search_fields = ("source",)
+    ordering = ("-fetched_at",)
+    readonly_fields = ("fetched_at",)
+
+    fieldsets = (
+        ("Tipo de cambio", {
+            "fields": ("usd_to_mxn",)
+        }),
+        ("Metadata", {
+            "fields": ("fetched_at", "source")
+        }),
+    )

@@ -59,6 +59,8 @@ class Collection( BaseModel):
     class Meta:        
         verbose_name = 'Coleccion'
         verbose_name_plural = 'Colecciones'
+        ordering = ['created_at']
+
 
 
 class ImageCollection( BaseModel):

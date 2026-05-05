@@ -133,3 +133,16 @@ class CouponUsage(BaseModel):
 
     def __str__(self):
         return f"{self.user.username} usó {self.coupon.code} en Order #{self.order.id}"
+
+
+class ExchangeRate(models.Model):
+    usd_to_mxn = models.DecimalField(max_digits=10, decimal_places=4)
+    fetched_at = models.DateTimeField()
+    source     = models.CharField(max_length=255)
+
+    class Meta:
+        verbose_name = ("Tipo de Cambio")
+        verbose_name_plural = ("Tipos de Cambio")
+
+    def __str__(self):
+        return f"USD a MXN: {self.usd_to_mxn} ({self.fetched_at.strftime('%d/%m/%Y')})"  

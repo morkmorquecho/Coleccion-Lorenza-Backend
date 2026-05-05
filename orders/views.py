@@ -7,6 +7,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from django.utils import timezone
+
+from pieces.service import CurrencyService
 from .models import Coupon
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -192,3 +194,10 @@ class ValidateCouponView(APIView):
             )
 
         return Response({'percentage': coupon.percentage})
+
+class ExchangeRateView(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        rate = CurrencyService.get_usd_rate()
+        return Response({'usd_to_mxn': rate})

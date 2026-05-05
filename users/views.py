@@ -7,6 +7,7 @@ from core.permission import IsOwner
 from core.responses.messages import UserMessages
 from pieces.models import Piece
 from users.docs.schemas import ADDRESS_SET_DEFAULT, ADDRESS_VIEWSET, EMAIL_UPDATE, WISHLIST_VIEWSET
+from users.filters import AddressFilter
 from users.serializers import EmailUpdateSerializer, AddressSerializer, WishListSerializer
 from auth.services import UsersRegisterService
 from core.services.email_service import ConfirmUserEmail,UpdateUserEmail
@@ -17,7 +18,7 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse
 from rest_framework.decorators import action
 from .models import Address, WishList
-_MODULE_PATH = __name__
+from django_filters.rest_framework import DjangoFilterBackend
 
 User = get_user_model()
 
@@ -59,6 +60,8 @@ class EmailUpdateAPIView(SentryErrorHandlerMixin, GenericAPIView):
 class AddressViewSet(ViewSetSentryMixin, viewsets.ModelViewSet):
     serializer_class = AddressSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = AddressFilter
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False): 

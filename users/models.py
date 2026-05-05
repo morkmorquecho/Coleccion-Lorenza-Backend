@@ -16,12 +16,12 @@ phone_regex = RegexValidator(
 #     REQUIRED_FIELDS = ['email']
 
 class Address(BaseModel):
-    user = models.ForeignKey(User, on_delete=models.CASCADE) 
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses') 
     recipient_name = models.CharField(max_length=200)    
     country = models.CharField(max_length=50, choices=[
-        ('mexico', 'Mexico'),
-        ('usa', 'Estados Unidos'),
-        ('canada', 'Canada')])
+        ('mexico', 'MX'),
+        ('usa', 'US'),
+        ('canada', 'US')])
     state = models.CharField(max_length=100) 
     city = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=20)

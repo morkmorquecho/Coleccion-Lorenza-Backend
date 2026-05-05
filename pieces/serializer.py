@@ -4,6 +4,9 @@ from pieces.models import Piece, PieceDiscount, PiecePhoto, Review, Section, Typ
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import ValidationError as DRFValidationError
+
+from pieces.service import CurrencyService
+from pieces.utils import COUNTRY_MAP
 class TypePieceSerializer(serializers.ModelSerializer):
     class Meta:
         model = TypePiece
@@ -60,13 +63,44 @@ class PieceSerializer(serializers.ModelSerializer):
             "final_price_base", #PRECIO DE LA PIEZA FINAL YA CON COMISIONES, ENVIO Y DESCUENTOS
             "original_price_base",#PRECIO DE LA PIEZA FINAL YA CON COMISIONES, ENVIO PEROOO SIN DESCUENTO PARA VISUALIZAR EN FRONT
         ]
+    
+    def _get_region(self) -> str:
+        request = self.context.get('request')
+        if not request:
+            return 'US'
 
-    def get_final_price_base(self, obj) -> Decimal:
-        return obj.get_final_price('MX', apply_discount=True)
+        if request.user.is_authenticated:
+            address = request.user.addresses.filter(is_default=True).first()
+            if address:
+                return COUNTRY_MAP.get(address.country, 'US')
 
-    def get_original_price_base(self, obj) -> Decimal:
-        return obj.get_final_price('MX', apply_discount=False)
+        return getattr(request, 'detected_country', 'US')
 
+
+    def get_final_price_base(self, obj) -> dict:
+        region = self._get_region()
+        price_mxn = obj.get_final_price(region, apply_discount=True)
+        return self._to_currencies(price_mxn)
+
+    def get_original_price_base(self, obj) -> dict:
+        region = self._get_region()
+        price_mxn = obj.get_final_price(region, apply_discount=False)
+        return self._to_currencies(price_mxn)
+
+    def _to_currencies(self, amount: Decimal) -> dict:
+        rate = self._get_rate()
+        return {
+            'MXN': amount,
+            'USD': round(amount / rate, 2),
+        }
+
+    def _get_rate(self) -> Decimal:
+        # Se cachea en el contexto para no consultar BD por cada campo
+        if 'usd_rate' not in self.context:
+            self.context['usd_rate'] = CurrencyService.get_usd_rate()
+        return self.context['usd_rate']
+    
+    
     def get_has_discount(self, obj) -> bool:
         return obj.get_active_discount() is not None
 

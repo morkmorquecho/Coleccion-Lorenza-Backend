@@ -7,6 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from core.mixins import ViewSetSentryMixin
 from pieces.docs.schemas import PIECE_DISCOUNT_VIEWSET, PIECE_PHOTO_VIEWSET, PIECE_VIEWSET, REVIEW_VIEWSET, SECTION_VIEWSET, TYPE_PIECE_VIEWSET
+from pieces.service import CurrencyService
 from .models import PieceDiscount, PiecePhoto, Review, TypePiece, Section
 from core.permission import IsAdminOrAuthenticatedCreate, IsAdminOrReadOnly
 from pieces.filters import PieceFilter, ReviewFilter
@@ -31,6 +32,14 @@ class PieceViewSet(ViewSetSentryMixin, ModelViewSet):
         serializer.save(slug=slugify(serializer.validated_data.get(
             'title', serializer.instance.title
         )))
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        currency = self.request.query_params.get('currency', 'MXN').upper()
+        context['currency'] = currency
+        if currency == 'USD':
+            context['usd_rate'] = CurrencyService.get_usd_rate()
+        return context
 
 @PIECE_PHOTO_VIEWSET
 class PiecePhotoViewSet(ViewSetSentryMixin, ModelViewSet):

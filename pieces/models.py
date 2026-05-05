@@ -174,7 +174,7 @@ class PiecePhoto( BaseModel):
         return f"Photo of {self.piece.title}"
 
 class ShippingRate(BaseModel):
-    region = models.CharField(max_length=10, choices=[('MX', 'México'), ('USA', 'Estados Unidos')])
+    region = models.CharField(max_length=10, choices=[('MX', 'México'), ('US', 'Estados Unidos')])
     kg = models.IntegerField()
     cost = models.DecimalField(max_digits=10, decimal_places=2)
 

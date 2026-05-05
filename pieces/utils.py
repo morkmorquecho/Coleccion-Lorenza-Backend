@@ -39,3 +39,10 @@ import math
 
 def ceil_to_10(value):
     return math.ceil(value / 10) * 10
+
+
+COUNTRY_MAP = {
+    'mexico': 'MX',
+    'usa': 'US',
+    'canada': 'CA',
+}

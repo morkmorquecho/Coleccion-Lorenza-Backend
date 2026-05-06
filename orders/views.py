@@ -157,14 +157,17 @@ class OrderViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
 
 @SHIPPING_TRACKING_VIEWSET
 class ShippingTrackingViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
-    serializer_class = ShippingTrackingSerializer 
-    permission_classes = [IsOwner]
+    serializer_class = ShippingTrackingSerializer
+    permission_classes = [IsAuthenticated]  
 
     def get_queryset(self):
         user = self.request.user
         if not user or not user.is_authenticated:
             return ShippingTracking.objects.none()
-        
+
+        if user.is_staff:
+            return ShippingTracking.objects.all()
+
         return ShippingTracking.objects.filter(order__user_id=user.id)
 
 

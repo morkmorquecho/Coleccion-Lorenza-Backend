@@ -29,7 +29,6 @@ class Order(BaseModel):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('paid', 'Paid'),
-        ('shipped', 'Shipped'),
         ('cancelled', 'Cancelled'),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')

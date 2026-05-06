@@ -6,8 +6,6 @@ from rest_framework_nested import routers
 router = DefaultRouter()
 router.register(r'orders',OrderViewSet, basename='orders')
 router.register(r'shipping-trackings', ShippingTrackingViewSet, basename='shipping-tracking')
-orders_router = routers.NestedSimpleRouter(router, r'orders', lookup='order')
-orders_router.register(r'shipping-trackings', ShippingTrackingViewSet ,basename='order-shiping-tracking')
 
 orders_patterns = [
     path('orders/checkout/', CheckoutView.as_view(), name='checkout'),
@@ -16,6 +14,5 @@ orders_patterns = [
     path('orders/coupons/validate/', ValidateCouponView.as_view(), name='coupon-validate'),
     path('usd-mxn-rate/', ExchangeRateView.as_view(), name='exchangue'),
     path('', include(router.urls)),
-    path('', include(orders_router.urls)),
 ]
 

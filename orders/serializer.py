@@ -71,6 +71,8 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ShippingTrackingSerializer(serializers.ModelSerializer):
+    total = serializers.DecimalField(source='order.total', max_digits=10, decimal_places=2, read_only=True)
+    
     class Meta:
         model = ShippingTracking
-        exclude = ['order'] 
+        fields = '__all__'

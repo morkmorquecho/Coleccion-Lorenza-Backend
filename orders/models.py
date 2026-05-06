@@ -41,6 +41,20 @@ class Order(BaseModel):
         verbose_name = ("Pedido")
         verbose_name_plural = ("Pedidos")
 
+    def can_be_cancelled(self) -> bool:
+        if self.status == 'cancelled':
+            return False
+        tracking = self.trakings.first()
+        if tracking is None:
+            return True
+        return tracking.status == 'pending'
+
+    def cancel(self):
+        if not self.can_be_cancelled():
+            raise ValueError("Este pedido no puede cancelarse porque ya fue enviado.")
+        self.status = 'cancelled'
+        self.save(update_fields=['status'])
+
     def __str__(self):
         return f"Order #{self.id} - {self.user.username} - {self.status}"
 
@@ -62,8 +76,9 @@ class OrderItem(BaseModel):
 class ShippingTracking(BaseModel):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
-        ('in_transit', 'In Transit'),
+        ('shipped', 'Shipped'),
         ('delivered', 'Delivered'),
+        ('cancelled', 'Cancelled'),
     ]
     
     CARRIER_CHOICES = [

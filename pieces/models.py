@@ -112,6 +112,10 @@ class Piece( BaseModel):
 
         return Decimal(ceil_to_10(subtotal + commission_stripe + iva))
 
+    def release_stock(self, quantity: int):
+        self.quantity += quantity
+        self.save(update_fields=['quantity'])
+
 class Discount(BaseModel):
     name = models.CharField(max_length=50, default='pendiente de nombrar')
     percentage = models.DecimalField( max_digits=3, decimal_places=1, validators=[MinValueValidator(0.1)])

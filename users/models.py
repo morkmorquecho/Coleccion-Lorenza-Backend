@@ -32,12 +32,21 @@ class Address(BaseModel):
     reference = models.TextField()
     apartment_number = models.CharField(max_length=20, blank=True, null=True)
     is_default = models.BooleanField(default=False)
-    
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        if is_new:
+            only_one = not Address.objects.filter(user=self.user).exclude(pk=self.pk).exists()
+            if only_one:
+                self.is_default = True
+                Address.objects.filter(pk=self.pk).update(is_default=True)
+
     class Meta:
         verbose_name = 'Direccion'
         verbose_name_plural = 'Direcciones'
         app_label = 'users'
-
 
     def __str__(self):
         return f"{self.street} {self.street_number}, {self.city}"

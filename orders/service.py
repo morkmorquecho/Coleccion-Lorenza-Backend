@@ -8,6 +8,7 @@ import stripe
 from core.mixins import SentryErrorHandlerMixin
 from orders.exceptions import OrderNotCancellableError, RefundError
 from orders.models import CouponUsage, Order, OrderItem, Payment, ShippingTracking
+from pieces.models import Piece
 
 class OrderService():
     @staticmethod
@@ -18,7 +19,7 @@ class OrderService():
         coupon = data.get('coupon_code')
 
         for item in items_data:
-            piece = item['piece']
+            piece = Piece.objects.select_for_update().get(id=item['piece'].id)
             if piece.quantity < item['quantity']:
                 raise ValidationError(
                     {'items': f'Stock insuficiente para "{piece.title}". Disponible: {piece.quantity}'}
@@ -46,7 +47,7 @@ class OrderService():
             )
 
         for item in items_data:
-            piece = item['piece']
+            piece = Piece.objects.select_for_update().get(id=item['piece'].id)
             OrderItem.objects.create(
                 order=order, piece=piece,
                 quantity=item['quantity'],
@@ -203,7 +204,7 @@ class OrderService():
     def cancel_order(order: Order, logger=None) -> None:
         log = logger or logging.getLogger(__name__)
 
-        if order.status in ['shipped', 'cancelled']:
+        if not order.can_be_cancelled():  
             raise OrderNotCancellableError(order.status)
 
         payment = order.payments.first()
@@ -227,12 +228,10 @@ class OrderService():
                     f"{json.dumps({'order_id': order.id, 'amount': str(payment.amount)}, indent=2)}"
                 )
             except stripe.error.StripeError as e:
-                raise RefundError(str(e)) from e  #  envuelves el error de Stripe en tu propio error
+                raise RefundError(str(e)) from e
 
-        for item in order.items.all():
-            piece = item.piece
-            piece.quantity += item.quantity
-            piece.save()
+        for item in order.items.all():  
+            item.piece.release_stock(item.quantity)
 
         order.status = 'cancelled'
         order.save()

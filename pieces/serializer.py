@@ -1,5 +1,6 @@
 from django.utils import timezone
 from decimal import Decimal
+from core.mixins import CurrencyMixin
 from pieces.models import Piece, PieceDiscount, PiecePhoto, Review, Section, TypePiece
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -17,7 +18,7 @@ class SectionSerializer(serializers.ModelSerializer):
         model = Section
         fields = "__all__"
 
-class PieceSerializer(serializers.ModelSerializer):
+class PieceSerializer(CurrencyMixin,serializers.ModelSerializer):
     type = serializers.SlugRelatedField(slug_field='key', read_only=True)
     section = serializers.SlugRelatedField(slug_field='key', read_only=True)
 
@@ -86,20 +87,6 @@ class PieceSerializer(serializers.ModelSerializer):
         region = self._get_region()
         price_mxn = obj.get_final_price(region, apply_discount=False)
         return self._to_currencies(price_mxn)
-
-    def _to_currencies(self, amount: Decimal) -> dict:
-        rate = self._get_rate()
-        return {
-            'MXN': amount,
-            'USD': round(amount / rate, 2),
-        }
-
-    def _get_rate(self) -> Decimal:
-        # Se cachea en el contexto para no consultar BD por cada campo
-        if 'usd_rate' not in self.context:
-            self.context['usd_rate'] = CurrencyService.get_usd_rate()
-        return self.context['usd_rate']
-    
     
     def get_has_discount(self, obj) -> bool:
         return obj.get_active_discount() is not None

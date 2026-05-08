@@ -493,3 +493,18 @@ class OwnerCheckMixin:
         except (ValueError, TypeError, AttributeError):
             return False
 
+from decimal import Decimal
+from pieces.service import CurrencyService
+
+class CurrencyMixin:
+    def _get_rate(self) -> Decimal:
+        if 'usd_rate' not in self.context:
+            self.context['usd_rate'] = CurrencyService.get_usd_rate()
+        return self.context['usd_rate']
+
+    def _to_currencies(self, amount: Decimal) -> dict:
+        rate = self._get_rate()
+        return {
+            'MXN': amount,
+            'USD': round(amount / rate, 2),
+        }

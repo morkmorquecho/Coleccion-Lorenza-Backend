@@ -1,12 +1,16 @@
 from datetime import date
+from decimal import Decimal
 from rest_framework import serializers
+from core.mixins import CurrencyMixin
 from pieces.models import Piece
 from users.models import Address
+from users.serializers import AddressSerializer
 from .models import CouponUsage, Order, OrderItem, Payment, ShippingTracking, Coupon
 
 class OrderItemInputSerializer(serializers.Serializer):
     piece = serializers.PrimaryKeyRelatedField(queryset=Piece.objects.all())
     quantity = serializers.IntegerField(min_value=1)
+
 
 class CheckoutSerializer(serializers.Serializer):
     address = serializers.PrimaryKeyRelatedField(queryset=Address.objects.all())
@@ -38,28 +42,30 @@ class CheckoutSerializer(serializers.Serializer):
         except Coupon.DoesNotExist:
             raise serializers.ValidationError("Cupón inválido o expirado.")
 
-        # Verificar que el usuario no lo haya usado antes
         user = self.context['request'].user
         if CouponUsage.objects.filter(user=user, coupon=coupon).exists():
             raise serializers.ValidationError("Ya usaste este cupón anteriormente.")
 
-        return coupon  
-    
+        return coupon
+
 
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = '__all__'
 
+
 class CouponUsageSerializer(serializers.ModelSerializer):
     class Meta:
         model = CouponUsage
         fields = '__all__'
 
+
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
-        exclude = ['external_id'] 
+        exclude = ['external_id']
+
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
@@ -70,9 +76,73 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = '__all__'
 
-class ShippingTrackingSerializer(serializers.ModelSerializer):
-    total = serializers.DecimalField(source='order.total', max_digits=10, decimal_places=2, read_only=True)
-    
+
+class PieceSnapshotSerializer(serializers.ModelSerializer):
+    """Solo los campos de pieza que necesita el modal"""
+    class Meta:
+        model = Piece
+        fields = ['id', 'title', 'thumbnail_path']
+
+
+class OrderItemDetailSerializer(serializers.ModelSerializer):
+    piece = PieceSnapshotSerializer(read_only=True)
+    price_snapshot = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'quantity', 'price_snapshot', 'piece']
+
+    def get_price_snapshot(self, obj):
+        return self.context['serializer']._to_currencies(obj.price_snapshot)
+
+
+class OrderDetailSerializer(CurrencyMixin, serializers.ModelSerializer):
+    items = OrderItemDetailSerializer(many=True, read_only=True)
+    can_be_cancelled = serializers.SerializerMethodField()
+    address = AddressSerializer(read_only=True)
+    total = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = ['id', 'total', 'status', 'address', 'items', 'can_be_cancelled']
+
+    def get_total(self, obj):
+        return self.context['serializer']._to_currencies(obj.total)
+
+    def get_can_be_cancelled(self, obj):
+        return obj.can_be_cancelled()
+
+
+class ShippingTrackingSerializer(CurrencyMixin, serializers.ModelSerializer):
+    """Ligero — para el listado"""
+    total = serializers.SerializerMethodField()
+    tracking_url = serializers.SerializerMethodField()
+
     class Meta:
         model = ShippingTracking
         fields = '__all__'
+
+    def get_tracking_url(self, obj):
+        return obj.get_tracking_url()
+
+    def get_total(self, obj):
+        return self._to_currencies(obj.order.total)
+
+
+class ShippingTrackingDetailSerializer(CurrencyMixin, serializers.ModelSerializer):
+    """Completo — para el modal"""
+    order = serializers.SerializerMethodField()
+    tracking_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ShippingTracking
+        fields = '__all__'
+
+    def get_tracking_url(self, obj):
+        return obj.get_tracking_url()
+
+    def get_order(self, obj):
+        return OrderDetailSerializer(
+            obj.order,
+            context={**self.context, 'serializer': self}
+        ).data

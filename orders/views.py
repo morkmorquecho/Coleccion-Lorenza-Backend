@@ -22,7 +22,7 @@ from core.permission import IsAdminOrReadOnly, IsOwner
 from orders.docs.schemas import CANCEL_ORDER_VIEW, CHECKOUT_VIEW, ORDER_VIEWSET, SHIPPING_TRACKING_VIEWSET, STRIPE_WEBHOOK_VIEW
 from orders.exceptions import OrderNotCancellableError, RefundError
 from orders.filters import OrderFilter
-from orders.serializer import CheckoutSerializer, OrderSerializer, ShippingTrackingSerializer
+from orders.serializer import CheckoutSerializer, OrderSerializer, ShippingTrackingDetailSerializer, ShippingTrackingSerializer
 from orders.service import OrderService
 from .models import CouponUsage, Order, OrderItem, Payment, ShippingTracking
 
@@ -157,8 +157,12 @@ class OrderViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
 
 @SHIPPING_TRACKING_VIEWSET
 class ShippingTrackingViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
-    serializer_class = ShippingTrackingSerializer
-    permission_classes = [IsAuthenticated]  
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return ShippingTrackingDetailSerializer
+        return ShippingTrackingSerializer
 
     def get_queryset(self):
         user = self.request.user

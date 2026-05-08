@@ -43,16 +43,13 @@ class Order(BaseModel):
     def can_be_cancelled(self) -> bool:
         if self.status == 'cancelled':
             return False
-        tracking = self.trakings.first()
-        if tracking is None:
-            return True
-        return tracking.status == 'pending'
 
-    def cancel(self):
-        if not self.can_be_cancelled():
-            raise ValueError("Este pedido no puede cancelarse porque ya fue enviado.")
-        self.status = 'cancelled'
-        self.save(update_fields=['status'])
+        tracking = self.trakings.first()
+
+        if tracking is None:
+            return False
+
+        return tracking.status == 'pending'
 
     def __str__(self):
         return f"Order #{self.id} - {self.user.username} - {self.status}"
@@ -98,6 +95,9 @@ class ShippingTracking(BaseModel):
 
 
     def get_tracking_url(self):
+        if not self.tracking_number:
+            return None
+        
         url_template = TRACKING_URLS.get(self.carrier.lower())
         if url_template:
             return url_template.format(self.tracking_number)

@@ -76,6 +76,9 @@ class ImageCollection( BaseModel):
     def __str__(self):
         return f"{self.name} ({self.year}) - {self.collection.name}"
     
-    class Meta:        
+    class Meta:
         verbose_name = 'Imagen de coleccion'
         verbose_name_plural = 'Imagenes de colecciones'
+        indexes = [
+            models.Index(fields=["collection", "year"], name="imgcol_collection_year_idx"),
+        ]

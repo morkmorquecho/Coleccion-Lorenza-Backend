@@ -1,10 +1,6 @@
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 import logging
 
 logger = logging.getLogger(__name__)
@@ -62,4 +58,18 @@ class UpdateUserEmail:
     def send_email(to_email, **context):
         subject = "Confirmacion de cuenta"
         template_name = 'emails/update_email.html'
-        EmailService.send_template_email(subject, to_email, template_name, **context)  
+        EmailService.send_template_email(subject, to_email, template_name, **context) 
+ 
+class NewOrderEmail:
+    @staticmethod
+    def send_email(to_email, **context):
+        subject = "Nuevo Pedido"
+        template_name = 'emails/new_order.html'
+        EmailService.send_template_email(subject, to_email, template_name, **context) 
+
+class SaleCompletedEmail:
+    @staticmethod
+    def send_email(to_email, **context):
+        subject = "Pago Exitoso"
+        template_name = 'emails/sale_completed.html'
+        EmailService.send_template_email(subject, to_email, template_name, **context) 

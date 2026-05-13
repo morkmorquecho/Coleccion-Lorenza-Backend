@@ -6,10 +6,18 @@ from rest_framework.exceptions import ValidationError
 import stripe
 
 from core.mixins import SentryErrorHandlerMixin
+from core.services.email_service import NewOrderEmail, SaleCompletedEmail
 from orders.exceptions import OrderNotCancellableError, RefundError
 from orders.models import CouponUsage, Order, OrderItem, Payment, ShippingTracking
 from pieces.models import Piece
+import requests
+from django.core.cache import cache
+from decouple import config
 
+
+FRONTEND_URL=config('FRONTEND_URL')
+BACKEND_URL=config('BACKEND_URL')
+EMAIL_ADMIN=config('EMAIL_ADMIN')
 class OrderService():
     @staticmethod
     @transaction.atomic
@@ -25,7 +33,7 @@ class OrderService():
                     {'items': f'Stock insuficiente para "{piece.title}". Disponible: {piece.quantity}'}
                 )
 
-        subtotal = sum((item['piece'].get_final_price('mx') - item['piece.piece_discounts']) * item['quantity'] for item in items_data)
+        subtotal = sum( item['piece'].get_final_price('mx') * item['quantity'] for item in items_data)
 
         discount = Decimal('0')
         if coupon:
@@ -131,6 +139,25 @@ class OrderService():
         # Recién aquí creamos el ShippingTracking porque el pago está confirmado
         ShippingTracking.objects.create(
             order=order,
+        )
+        SaleCompletedEmail.send_email(to_email=order.user.email,
+                                    nombre=order.user.username 
+                                    ,order_number=order.id, 
+                                    order_date=order.created_at,
+                                    order_total=order.total,
+                                    order_url=f'{FRONTEND_URL}/cuenta')
+        
+        order_items = order.items.select_related('piece').all()
+
+        NewOrderEmail.send_email(
+            to_email=EMAIL_ADMIN,
+            order_number=order.id,
+            customer_name=order.user.username,
+            customer_email=order.user.email,
+            order_date=order.created_at,
+            order_items=order_items,
+            order_total=order.total,
+            admin_order_url=f'{BACKEND_URL}/orders/order/',
         )
 
         log.info(
@@ -241,5 +268,8 @@ class OrderService():
             payment.save()
 
         tracking = order.trakings.first()
-        if tracking and tracking.status == 'pending':
-            tracking.delete()
+        if tracking:
+            if tracking.status == 'pending':
+                tracking.status = 'cancelled'
+                tracking.save()
+

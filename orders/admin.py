@@ -154,7 +154,7 @@ class CouponUsageAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 
 @admin.register(ExchangeRate)
 class ExchangeRateAdmin(admin.ModelAdmin):
-    list_display = ("usd_to_mxn", "fetched_at", "source")
+    list_display = ("id","usd_to_mxn", "fetched_at", "source")
     list_filter = ("source", "fetched_at")
     search_fields = ("source",)
     ordering = ("-fetched_at",)

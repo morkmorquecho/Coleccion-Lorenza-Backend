@@ -12,8 +12,8 @@ TRACKING_URLS = {
 class Coupon(BaseModel):
     code = models.CharField(max_length=100, unique=True)
     percentage = models.DecimalField(max_digits=3, decimal_places=1)
-    valid_from = models.DateField()
-    valid_until = models.DateField()
+    valid_from = models.DateField(db_index=True)           
+    valid_until = models.DateField(db_index=True)  
 
     class Meta:
         verbose_name = ("Cupon")
@@ -24,6 +24,11 @@ class Coupon(BaseModel):
 
     def __str__(self):
         return f"{self.code} ({self.percentage}%)"
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=["valid_from", "valid_until"], name="coupon_validity_idx"),
+        ]
 
 class Order(BaseModel):
     STATUS_CHOICES = [
@@ -33,12 +38,13 @@ class Order(BaseModel):
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     total = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
     address = models.ForeignKey(Address, on_delete=models.CASCADE, related_name='orders')
 
     class Meta:
-        verbose_name = ("Pedido")
-        verbose_name_plural = ("Pedidos")
+        indexes = [
+            models.Index(fields=["user", "status"], name="order_user_status_idx"),
+        ]
 
     def can_be_cancelled(self) -> bool:
         if self.status == 'cancelled':
@@ -63,8 +69,9 @@ class OrderItem(BaseModel):
     price_snapshot = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
-        verbose_name = ("Ítem de Pedido")
-        verbose_name_plural = ("Piezas del pedido")
+        indexes = [
+            models.Index(fields=["order", "piece"], name="orderitem_order_piece_idx"),
+        ]
 
     def __str__(self):
         return f"{self.quantity} x {self.piece} (Order #{self.order.id})"
@@ -85,13 +92,14 @@ class ShippingTracking(BaseModel):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='trakings')
     carrier = models.CharField(max_length=50, choices=CARRIER_CHOICES, default='fedex')
     tracking_number = models.CharField(max_length=100, blank=True, null=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
-    shipped_at = models.DateTimeField (null=True, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
+    shipped_at = models.DateTimeField (null=True, blank=True, db_index=True) 
     delivered_at = models.DateTimeField (null=True, blank=True)
 
     class Meta:
         verbose_name = ("Rastreo de pedido")
-        verbose_name_plural = ("Rastreo de pedidos")   
+        verbose_name_plural = ("Rastreo de pedidos") 
+        ordering = ['-created_at']
 
 
     def get_tracking_url(self):
@@ -118,12 +126,13 @@ class Payment(BaseModel):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=50)
-    external_id = models.CharField(max_length=250)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    external_id = models.CharField(max_length=250, db_index=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending' ,db_index=True)
 
     class Meta:
-        verbose_name = ("Registro de Pago")
-        verbose_name_plural = ("Registros de Pagos")   
+        indexes = [
+            models.Index(fields=["order", "status"], name="payment_order_status_idx"),
+        ]   
 
     def __str__(self):
         return f"Pago {self.id} - {self.order} - {self.status}"
@@ -135,9 +144,9 @@ class CouponUsage(BaseModel):
     discount_applied = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
-        verbose_name = ("Registro de cupon usado")
-        verbose_name_plural = ("Registros de cupones usados")  
-        
+        indexes = [
+            models.Index(fields=["coupon"], name="couponusage_coupon_idx"), 
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "coupon"],
@@ -151,7 +160,7 @@ class CouponUsage(BaseModel):
 
 class ExchangeRate(models.Model):
     usd_to_mxn = models.DecimalField(max_digits=10, decimal_places=4)
-    fetched_at = models.DateTimeField()
+    fetched_at = models.DateTimeField(db_index=True) 
     source     = models.CharField(max_length=255)
 
     class Meta:

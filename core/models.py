@@ -54,10 +54,10 @@ class BaseModel(models.Model):
     Modelo base abstracto para todos los modelos del proyecto.
     Incluye campos de auditoría y soft delete.
     """
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    is_active = models.BooleanField(default=True, db_index=True)
     
     
     objects = SoftDeleteManager()
@@ -66,6 +66,12 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
         ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=["is_active", "deleted_at"],
+                name="%(app_label)s_%(class)s_active_deleted_idx"
+            ),
+        ]
     
     def delete(self, using=None, keep_parents=False, hard=False):
         """

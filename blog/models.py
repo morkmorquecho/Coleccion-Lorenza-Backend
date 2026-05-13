@@ -22,6 +22,9 @@ class Blog( BaseModel):
     class Meta:
         verbose_name = 'Blog'
         verbose_name_plural = 'Blogs'
+        indexes = [
+            models.Index(fields=["status", "published_at"], name="blog_status_published_idx"),
+        ]
 
     def __str__(self):
         return f'{self.title}'

@@ -3,218 +3,465 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Compra confirmada — {{ store_name }}</title>
+  <title>Compra confirmada — Colección Lorenza</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
   <style>
-    /* Estilos base para clientes de correo: máxima compatibilidad */
-    .ExternalClass, .ReadMsgBody { width: 100%; background-color: #F5EFE6; }
-    body, table, td, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-    table, td { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-    img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
-    body { margin: 0; padding: 0; background-color: #F5EFE6; font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; }
-    .garamond { font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', Times, serif; }
-    .dm-sans { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; }
-    /* Responsive para móviles */
-    @media only screen and (max-width: 600px) {
-      .responsive-table { width: 100% !important; }
-      .stack-cell { display: block !important; width: 100% !important; text-align: left !important; padding: 12px 16px !important; border-bottom: 1px solid #EDE3D4 !important; }
-      .stack-cell:last-child { border-bottom: none !important; }
-      .content-padding { padding: 28px 20px 32px !important; }
-      .header-padding { padding: 24px 20px 20px !important; }
-      .footer-padding { padding: 20px 20px !important; }
-      .btn-table { width: 100% !important; }
-      .btn-td { display: block !important; width: 100% !important; text-align: center !important; }
+    /* ── Reset ───────────────────────────────────────────── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #ffffff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      color: #1a1a1a;
+      line-height: 1.6;
+    }
+
+    /* ── Wrapper ─────────────────────────────────────────── */
+    .wrapper {
+      width: 100%;
+      padding: 40px 16px;
+      background: #f8f8f8;
+    }
+
+    .container {
+      max-width: 560px;
+      margin: 0 auto;
+      background: #ffffff;
+    }
+
+    /* ── Accent Bar ──────────────────────────────────────── */
+    .accent-bar {
+      height: 4px;
+      background: #dd4b24;
+    }
+
+    /* ── Header ──────────────────────────────────────────── */
+    .header {
+      padding: 32px 40px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .brand {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a1a1a;
+      letter-spacing: -0.02em;
+    }
+
+    /* ── Content ─────────────────────────────────────────── */
+    .content {
+      padding: 40px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      background: #fef3f0;
+      color: #dd4b24;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+
+    .heading {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .greeting {
+      font-size: 15px;
+      color: #444444;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .greeting strong {
+      color: #1a1a1a;
+      font-weight: 600;
+    }
+
+    /* ── Confirmation Banner ─────────────────────────────── */
+    .confirmation-banner {
+      background: #fafafa;
+      border-left: 4px solid #dd4b24;
+      padding: 16px 20px;
+      border-radius: 6px;
+      margin-bottom: 32px;
+    }
+
+    .banner-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #dd4b24;
+      margin-bottom: 4px;
+    }
+
+    .banner-text {
+      font-size: 13px;
+      color: #666666;
+    }
+
+    /* ── Info Grid (unificado) ───────────────────────────── */
+    .info-section {
+      margin-bottom: 32px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #999999;
+      margin-bottom: 16px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .info-item {
+      padding: 16px;
+      background: #fafafa;
+      border-radius: 6px;
+    }
+
+    .info-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #999999;
+      margin-bottom: 4px;
+    }
+
+    .info-value {
+      font-size: 14px;
+      color: #1a1a1a;
+      font-weight: 500;
+    }
+
+    /* ── Products ────────────────────────────────────────── */
+    .products-section {
+      margin-bottom: 32px;
+    }
+
+    .product-item {
+      display: flex;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid #f0f0f0;
+      gap: 16px;
+    }
+
+    .product-item:last-of-type {
+      border-bottom: none;
+    }
+
+    .product-image {
+      width: 70px;
+      height: 110px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #f5f5f5;
+      flex-shrink: 0;
+    }
+
+    .product-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .product-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1a1a1a;
+      margin-bottom: 2px;
+            margin-left:15px;
+
+    }
+
+    .product-price {
+      font-size: 14px;
+      color: #666666;
+    }
+
+    /* ── Next Steps (estilo limpio) ──────────────────────── */
+    .next-steps {
+      margin-bottom: 32px;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .step-item:last-of-type {
+      border-bottom: none;
+    }
+
+    .step-number {
+      width: 32px;
+      flex-shrink: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #dd4b24;
+    }
+
+    .step-content {
+      flex: 1;
+    }
+
+    .step-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 4px;
+    }
+
+    .step-description {
+      font-size: 13px;
+      color: #666666;
+      line-height: 1.5;
+    }
+
+    /* ── Total ───────────────────────────────────────────── */
+    .total-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      margin-bottom: 32px;
+    }
+
+    .total-label {
+      margin-top: 3px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #ffffff;
+      letter-spacing: 0.02em;
+    }
+
+    .total-amount {
+      font-size: 20px;
+      font-weight: 600;
+      margin-left: 30px ;
+      color: #ffffff;
+    }
+
+    /* ── CTA Button ──────────────────────────────────────── */
+    .cta-wrap {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 28px;
+      background: #dd4b24;
+      color: #ffffff !important;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .btn:hover {
+      background: #c43d1a;
+    }
+
+    /* ── Support Note ────────────────────────────────────── */
+    .support-note {
+      text-align: center;
+      font-size: 12px;
+      color: #999999;
+      margin-top: 24px;
+    }
+
+    /* ── Divider ─────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: #f0f0f0;
+      margin: 32px 0;
+    }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    .footer {
+      padding: 24px 40px;
+      border-top: 1px solid #f0f0f0;
+      text-align: center;
+    }
+
+    .footer-brand {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 4px;
+    }
+
+    .footer-note {
+      font-size: 12px;
+      color: #999999;
+    }
+
+    .product-price {
+      font-size: 14px;
+      color: #666666;
+      margin-left:15px;
+    }
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media (max-width: 520px) {
+      .wrapper { padding: 16px 8px; }
+      .header { padding: 24px; }
+      .content { padding: 24px; }
+      .info-grid { grid-template-columns: 1fr; gap: 12px; }
+      .heading { font-size: 20px; }
+      .footer { padding: 20px 24px; }
+      .product-image { width: 60px; height: 107px; }
+      .step-item { gap: 12px; }
+      .step-number { width: 28px; font-size: 14px; }
     }
   </style>
 </head>
-<body style="margin:0; padding:0; background-color:#F5EFE6; font-family:'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;">
-  <center style="width:100%; table-layout:fixed;">
-    <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" style="width:100%; background-color:#F5EFE6;">
-      <tr>
-        <td align="center" style="padding:30px 12px 48px;">
-          <!-- Contenedor principal ancho máximo 580px -->
-          <table width="100%" max-width="580" border="0" cellpadding="0" cellspacing="0" style="max-width:580px; width:100%; background:#FDFAF6; border-radius:2px;">
-            
-            <!-- Línea superior decorativa -->
-            <tr>
-              <td style="height:3px; background:linear-gradient(90deg, #C24B0A 0%, #E8760F 45%, #F5A623 100%); font-size:0; line-height:0;">&nbsp;</td>
-            </tr>
-            
-            <!-- HEADER: store + badge -->
-            <tr>
-              <td style="padding:28px 32px 20px; border-bottom:1px solid #EDE3D4;">
-                <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="font-family:'Cormorant Garamond', Georgia, serif; font-size:22px; font-weight:500; color:#1A0F00; letter-spacing:0.06em; text-transform:uppercase;">
-                      {{ store_name }}
-                      <div style="font-family:'DM Sans', Arial, sans-serif; font-size:9px; letter-spacing:0.18em; color:#B8894A; text-transform:uppercase; margin-top:4px;">Coleccion Lorenza</div>
-                    </td>
-                    <td align="right" style="vertical-align:top;">
-                      <div style="background:#FFF4E8; border:1px solid #E8D0A8; border-radius:2px; padding:5px 12px; font-size:10px; letter-spacing:0.1em; color:#C24B0A; text-transform:uppercase; font-weight:500; white-space:nowrap; display:inline-block;">Pedido confirmado</div>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            
-            <!-- CONTENIDO PRINCIPAL -->
-            <tr>
-              <td style="padding:32px 32px 36px;" class="content-padding">
-                
-                <!-- Eyebrow + título -->
-                <p style="margin:0 0 8px 0; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:#C24B0A; font-weight:400;">Confirmación de compra</p>
-                <h1 style="margin:0 0 12px 0; font-family:'Cormorant Garamond', Georgia, serif; font-size:28px; font-weight:500; color:#1A0F00; line-height:1.2;">Tu pedido está en camino.</h1>
-                
-                <!-- Saludo -->
-                <p style="margin:0 0 24px 0; font-size:14px; color:#5C3D1A; line-height:1.5; font-weight:300;">Hola, <strong style="font-weight:500; color:#1A0F00;">{{ nombre }}</strong>. Gracias por tu compra. Hemos recibido tu pedido y el pago fue procesado con éxito. <br> La entrega estimada de tu pedido es de 5 a 7 días hábiles. </p>
 
-                <!-- BANNER confirmación con ICONO DE PALOMA (check) dentro de círculo naranja -->
-                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#1A0F00; border-radius:2px; margin-bottom:28px;">
-                  <tr>
-                    <td style="padding:14px 18px;">
-                      <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td width="44" style="vertical-align:middle; width:44px;">
-                            <!-- Paloma blanca de check (ícono de verificación) -->
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
-                              <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="#C24B0A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                          </td>
-                          <td style="vertical-align:middle;">
-                            <div style="font-size:13px; color:#EDE3D4; line-height:1.5;">
-                              <strong style="display:block; font-size:14px; font-weight:500; color:#F5A623; margin-bottom:3px;">Pago recibido</strong>
-                              Tu pedido ya está siendo preparado para envío.
-                            </div>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </table>
-                </table>
-                
-                <!-- Resumen del pedido (tabla con grid adaptativo) -->
-                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border:1px solid #EDE3D4; border-radius:2px; margin-bottom:28px;">
-                  <tr>
-                    <td style="background:#FFF4E8; padding:10px 16px; border-bottom:1px solid #EDE3D4;">
-                      <span style="font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:#B8894A;">Resumen del pedido</span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:0;">
-                      <table width="100%" border="0" cellpadding="0" cellspacing="0" style="width:100%;">
-                        <tr>
-                          <td width="33%" style="border-right:1px solid #EDE3D4; padding:14px 16px;" class="stack-cell">
-                            <p style="margin:0 0 4px 0; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:#B8894A;">Número</p>
-                            <p style="margin:0; font-size:13px; color:#1A0F00; font-weight:400;">#{{ order_number }}</p>
-                          </td>
-                          <td width="33%" style="border-right:1px solid #EDE3D4; padding:14px 16px;" class="stack-cell">
-                            <p style="margin:0 0 4px 0; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:#B8894A;">Fecha</p>
-                            <p style="margin:0; font-size:13px; color:#1A0F00;">{{ order_date }}</p>
-                          </td>
-                          <td width="34%" style="padding:14px 16px;" class="stack-cell">
-                            <p style="margin:0 0 4px 0; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:#B8894A;">Total</p>
-                            <p style="margin:0; font-family:'Cormorant Garamond', Georgia, serif; font-size:18px; font-weight:500; color:#C24B0A;">${{ order_total }}</p>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-                
-                <!-- Próximos pasos (SIN CÍRCULOS, solo números en línea) -->
-                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
-                  <tr>
-                    <td style="padding-bottom:8px;">
-                      <p style="margin:0 0 14px 0; font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:#B8894A;">¿Qué sigue?</p>
-                    </td>
-                  </tr>
-                  <!-- Paso 1: sin círculo, número limpio -->
-                  <tr>
-                    <td style="padding:12px 0; border-bottom:1px solid #EDE3D4;">
-                      <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td width="36" style="vertical-align:top; width:36px; font-size:14px; font-weight:500; color:#C24B0A;">1.</td>
-                          <td style="vertical-align:top;">
-                            <p style="margin:0 0 3px 0; font-size:13px; color:#1A0F00; font-weight:500;">Preparación</p>
-                            <p style="margin:0; font-size:12px; color:#8C6A3A; line-height:1.5;">Tu pieza está siendo empacada con cuidado para su envío.</p>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                  <!-- Paso 2 -->
-                  <tr>
-                    <td style="padding:12px 0; border-bottom:1px solid #EDE3D4;">
-                      <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td width="36" style="vertical-align:top; width:36px; font-size:14px; font-weight:500; color:#C24B0A;">2.</td>
-                          <td style="vertical-align:top;">
-                            <p style="margin:0 0 3px 0; font-size:13px; color:#1A0F00; font-weight:500;">Número de rastreo</p>
-                            <p style="margin:0; font-size:12px; color:#8C6A3A; line-height:1.5;">Te enviaremos un correo con tu guía de seguimiento en cuanto salgamos a la paquetería.</p>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                  <!-- Paso 3 -->
-                  <tr>
-                    <td style="padding:12px 0;">
-                      <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td width="36" style="vertical-align:top; width:36px; font-size:14px; font-weight:500; color:#C24B0A;">3.</td>
-                          <td style="vertical-align:top;">
-                            <p style="margin:0 0 3px 0; font-size:13px; color:#1A0F00; font-weight:500;">Entrega</p>
-                            <p style="margin:0; font-size:12px; color:#8C6A3A; line-height:1.5;">Recibirás tu pedido en la dirección indicada.</p>
-                          </td>
-                        </td>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-                
-                <!-- CTA Botón -->
-                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
-                  <tr>
-                    <td align="center">
-                      <table border="0" cellpadding="0" cellspacing="0" style="background:#C24B0A; border-radius:2px;">
-                        <tr>
-                          <td align="center" style="padding:12px 28px;">
-                            <a href="{{ order_url }}" style="color:#FDFAF6; text-decoration:none; font-size:11px; letter-spacing:0.2em; text-transform:uppercase; font-weight:500; display:inline-block;">Ver mi pedido</a>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-                
-                <!-- Separador minimalista -->
-                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-                  <tr>
-                    <td align="center">
-                      <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td height="1" bgcolor="#EDE3D4" style="font-size:0;"></td>
-                          <td width="12" align="center" style="font-size:0; padding:0 6px; color:#E8D0A8;">●</td>
-                          <td height="1" bgcolor="#EDE3D4" style="font-size:0;"></td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-                
-                <!-- Nota de ayuda -->
-                <p style="margin:0; font-size:12px; color:#A07840; text-align:center; line-height:1.5;">¿Tienes alguna duda? Responde a este correo y con gusto te ayudamos.</p>
-                
-              </td>
-            </tr>
-                        
-            <!-- Línea inferior decorativa -->
-            <tr>
-              <td style="height:2px; background:linear-gradient(90deg, #F5A623 0%, #E8760F 55%, #C24B0A 100%); font-size:0; line-height:0;">&nbsp;</td>
-            </tr>
-            
-          </table>
-        </td>
-      </tr>
-    </table>
-  </center>
+<body>
+  <div class="wrapper">
+    <div class="container">
+
+      <div class="accent-bar"></div>
+
+      <!-- Header -->
+      <div class="header">
+        <div class="brand">Colección Lorenza</div>
+      </div>
+
+      <!-- Content -->
+      <div class="content">
+
+        <div class="status-badge">Pedido confirmado</div>
+        <h1 class="heading">Tu pedido está en camino</h1>
+        
+        <p class="greeting">
+          Hola, <strong>{{ customer_name }}</strong>. Gracias por tu compra. 
+          Hemos recibido tu pedido y el pago fue procesado con éxito. 
+          La entrega estimada es de 5 a 7 días hábiles.
+        </p>
+
+        <!-- Confirmation Banner -->
+        <div class="confirmation-banner">
+          <div class="banner-title">✓ Pago recibido</div>
+          <div class="banner-text">Tu pedido ya está siendo preparado para envío.</div>
+        </div>
+
+        <!-- Order Summary (grid unificado) -->
+        <div class="info-section">
+          <p class="section-title">Resumen del pedido</p>
+          <div class="info-grid">
+            <div class="info-item">
+              <p class="info-label">Pedido</p>
+              <p class="info-value">#{{ order_number }}</p>
+            </div>
+            <div class="info-item">
+              <p class="info-label">Fecha</p>
+              <p class="info-value">{{ order_date }}</p>
+            </div>
+            <div class="info-item">
+              <p class="info-label">Total</p>
+              <p class="info-value">${{ order_total }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Products -->
+        <div class="products-section">
+          <p class="section-title">Productos</p>
+          
+          {% for item in order_items %}
+          <div class="product-item">
+            <img src="{{ item.piece.thumbnail_path.url }}" alt="{{ item.piece.title }}" class="product-image">
+            <div class="product-details">
+              <p class="product-name">{{ item.piece.title }}</p>
+              <p class="product-price">${{ item.price_snapshot }}</p><br>
+              <p class="product-name">Unidades:</p>
+              <p class="product-price">{{item.quantity}} </p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Total (consistente) -->
+        <div class="total-section">
+          <span class="total-label">Total del pedido: </span>
+          <span class="total-amount">${{ order_total }}</span>
+        </div>
+
+        <!-- Next Steps (estilo limpio sin círculos) -->
+        <div class="next-steps">
+          <p class="section-title">¿Qué sigue?</p>
+          
+          <div class="step-item">
+            <div class="step-number">1.</div>
+            <div class="step-content">
+              <div class="step-title">Preparación</div>
+              <div class="step-description">Tu pieza está siendo empacada con cuidado para su envío.</div>
+            </div>
+          </div>
+
+          <div class="step-item">
+            <div class="step-number">2.</div>
+            <div class="step-content">
+              <div class="step-title">Número de rastreo</div>
+              <div class="step-description">Te enviaremos un correo con tu guía de seguimiento en cuanto salga a paquetería.</div>
+            </div>
+          </div>
+
+          <div class="step-item">
+            <div class="step-number">3.</div>
+            <div class="step-content">
+              <div class="step-title">Entrega</div>
+              <div class="step-description">Recibirás tu pedido en la dirección indicada.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA Button -->
+        <div class="cta-wrap">
+          <a href="{{ order_url }}" class="btn">Ver mi pedido</a>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Support Note -->
+        <div class="support-note">
+          ¿Tienes alguna duda? Responde a este correo y con gusto te ayudamos.
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p class="footer-brand">Colección Lorenza</p>
+        <p class="footer-note">Notificación automática de compra</p>
+      </div>
+
+    </div>
+  </div>
 </body>
+</html>

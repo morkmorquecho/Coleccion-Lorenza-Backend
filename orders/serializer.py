@@ -146,3 +146,13 @@ class ShippingTrackingDetailSerializer(CurrencyMixin, serializers.ModelSerialize
             obj.order,
             context={**self.context, 'serializer': self}
         ).data
+
+class UpdateTrackingNumberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShippingTracking
+        fields = ['tracking_number']
+
+    def validate_tracking_number(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError('El número de rastreo no puede estar vacío.')
+        return value.strip()

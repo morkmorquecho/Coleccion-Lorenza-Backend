@@ -22,9 +22,13 @@ from core.permission import IsAdminOrReadOnly, IsOwner
 from orders.docs.schemas import CANCEL_ORDER_VIEW, CHECKOUT_VIEW, ORDER_VIEWSET, SHIPPING_TRACKING_VIEWSET, STRIPE_WEBHOOK_VIEW
 from orders.exceptions import OrderNotCancellableError, RefundError
 from orders.filters import OrderFilter
-from orders.serializer import CheckoutSerializer, OrderSerializer, ShippingTrackingDetailSerializer, ShippingTrackingSerializer
+from orders.serializer import CheckoutSerializer, OrderSerializer, ShippingTrackingDetailSerializer, ShippingTrackingSerializer, UpdateTrackingNumberSerializer
 from orders.service import OrderService
 from .models import CouponUsage, Order, OrderItem, Payment, ShippingTracking
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAdminUser
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -173,6 +177,23 @@ class ShippingTrackingViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
             return ShippingTracking.objects.all()
 
         return ShippingTracking.objects.filter(order__user_id=user.id)
+    
+    @action(
+        detail=True,
+        methods=['patch'],
+        permission_classes=[IsAdminUser]
+    )
+    def update_tracking_number(self, request, pk=None):
+        instance = self.get_object()
+        serializer = UpdateTrackingNumberSerializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        updated = OrderService.update_tracking_number(
+            instance=instance,
+            tracking_number=serializer.validated_data['tracking_number']
+        )
+
+        return Response(UpdateTrackingNumberSerializer(updated).data)
 
 
 class ValidateCouponView(APIView):
@@ -208,3 +229,4 @@ class ExchangeRateView(APIView):
     def get(self, request):
         rate = CurrencyService.get_usd_rate()
         return Response({'usd_to_mxn': rate})
+    

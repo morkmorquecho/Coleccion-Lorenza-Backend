@@ -6,7 +6,7 @@ from rest_framework.exceptions import ValidationError
 import stripe
 
 from core.mixins import SentryErrorHandlerMixin
-from core.services.email_service import NewOrderEmail, SaleCompletedEmail
+from core.services.email_service import NewOrderEmail, OrderShippedEmail, SaleCompletedEmail
 from orders.exceptions import OrderNotCancellableError, RefundError
 from orders.models import CouponUsage, Order, OrderItem, Payment, ShippingTracking
 from pieces.models import Piece
@@ -272,4 +272,22 @@ class OrderService():
             if tracking.status == 'pending':
                 tracking.status = 'cancelled'
                 tracking.save()
+
+
+    def update_tracking_number(instance: ShippingTracking, tracking_number: str) -> ShippingTracking:
+        instance.tracking_number = tracking_number
+        instance.save(update_fields=['tracking_number'])
+        order_items = instance.order.items.select_related('pieces').all()
+
+        OrderShippedEmail.send_email(
+            to_email=instance.order.user.email,
+            order_number=instance.order.id,
+            order_date=instance.order.created_at,
+            customer_name=instance.order.user.username,
+            customer_email=instance.order.user.email,
+            tracking_number=instance.tracking_number,
+            tracking_url=instance.get_tracking_url,
+            order_items=order_items,
+        )
+        return instance
 

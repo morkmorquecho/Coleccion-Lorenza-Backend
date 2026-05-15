@@ -181,7 +181,8 @@ class ShippingTrackingViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
     @action(
         detail=True,
         methods=['patch'],
-        permission_classes=[IsAdminUser]
+        permission_classes=[IsAdminUser],
+        url_path='update-tracking-number'
     )
     def update_tracking_number(self, request, pk=None):
         instance = self.get_object()

@@ -300,7 +300,8 @@ class OrderService():
 
     def update_tracking_number(instance: ShippingTracking, tracking_number: str) -> ShippingTracking:
         instance.tracking_number = tracking_number
-        instance.save(update_fields=['tracking_number'])
+        instance.status = 'shipped'
+        instance.save(update_fields=['tracking_number', 'status'])
         order_items = instance.order.items.select_related('piece').all()
 
         OrderShippedEmail.send_email(

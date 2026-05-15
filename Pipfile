@@ -17,7 +17,6 @@ rich = "*"
 itsdangerous = "*"
 django-redis = "*"
 django-allauth = "*"
-requests = "*"
 cryptography = "*"
 pyodbc = "*"
 psycopg2-binary = "*"
@@ -28,6 +27,8 @@ django-filter = "*"
 drf-nested-routers = "*"
 stripe = "*"
 google-auth = "*"
+geoip2 = "*"
+requests = "*"
 
 [dev-packages]
 

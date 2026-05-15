@@ -14,7 +14,6 @@ from auth.docs.schemas import LOGIN_SCHEMA, LOGOUT, TOKEN_REFRESH, TOKEN_VERIFY
 from auth.serializers import CustomTokenObtainPairSerializer, LoginSerializer
 from auth.services import LoginService, UsersRegisterService
 from core.docs.schema_utils import auto_schema
-from core.services.email_service import ConfirmUserEmail
 from config.throttling import LoginThrottle
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView

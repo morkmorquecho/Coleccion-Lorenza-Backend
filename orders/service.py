@@ -1,3 +1,4 @@
+from django.utils import timezone
 from decimal import Decimal
 import logging
 import json
@@ -6,7 +7,7 @@ from rest_framework.exceptions import ValidationError
 import stripe
 
 from core.mixins import SentryErrorHandlerMixin
-from core.services.email_service import NewOrderEmail, OrderShippedEmail, SaleCompletedEmail
+from core.services.email_service import OrderCancelledAdminEmail, OrderCancelledUserEmail, OrderCreatedAdminEmail, OrderShippedEmail, OrderCreatedUserEmail
 from orders.exceptions import OrderNotCancellableError, RefundError
 from orders.models import CouponUsage, Order, OrderItem, Payment, ShippingTracking
 from pieces.models import Piece
@@ -140,7 +141,7 @@ class OrderService():
         ShippingTracking.objects.create(
             order=order,
         )
-        SaleCompletedEmail.send_email(to_email=order.user.email,
+        OrderCreatedUserEmail.send_email(to_email=order.user.email,
                                     nombre=order.user.username 
                                     ,order_number=order.id, 
                                     order_date=order.created_at,
@@ -149,7 +150,7 @@ class OrderService():
         
         order_items = order.items.select_related('piece').all()
 
-        NewOrderEmail.send_email(
+        OrderCreatedAdminEmail.send_email(
             to_email=EMAIL_ADMIN,
             order_number=order.id,
             customer_name=order.user.username,
@@ -272,6 +273,29 @@ class OrderService():
             if tracking.status == 'pending':
                 tracking.status = 'cancelled'
                 tracking.save()
+
+        order_items = order.items.select_related('piece').all()
+        
+        OrderCancelledUserEmail.send_email(
+         to_email=order.user.email,
+         customer_name=order.user.username,
+         order_number=order.id,
+         cancellation_date=timezone.now().date(),
+         order_items=order_items,
+         order_total=order.total,
+         shop_url=FRONTEND_URL)
+        
+        OrderCancelledAdminEmail.send_email(
+         to_email=EMAIL_ADMIN,
+         customer_name=order.user.username,
+         order_number=order.id,
+         cancellation_date=timezone.now().date(),
+         order_items=order_items,
+         order_total=order.total,
+         customer_email=order.user.email,
+         customer_phone=order.address.phone_number,
+         admin_order_url=BACKEND_URL
+        )
 
 
     def update_tracking_number(instance: ShippingTracking, tracking_number: str) -> ShippingTracking:

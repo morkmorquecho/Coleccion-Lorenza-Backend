@@ -384,6 +384,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',  
+    'core.middleware.CountryDetectionMiddleware',
 ]
 
 
@@ -459,7 +460,7 @@ LOGGING = {
             'maxBytes': 1024 * 1024 * 15,  # 15MB
             'backupCount': 10,
             'formatter': 'verbose',
-            'filters': ['require_debug_false']
+            #'filters': ['require_debug_false']
         },
         'error_file': {
             'level': 'ERROR',
@@ -468,7 +469,7 @@ LOGGING = {
             'maxBytes': 1024 * 1024 * 15,
             'backupCount': 10,
             'formatter': 'verbose',
-            'filters': ['require_debug_false']
+            #'filters': ['require_debug_false']
         },
     },
     'loggers': {
@@ -478,7 +479,7 @@ LOGGING = {
             'propagate': False,
         },
         'django.request': {
-            'handlers': ['error_file'],
+            'handlers': ['console', 'error_file'],
             'level': 'ERROR',
             'propagate': False,
         },
@@ -567,6 +568,11 @@ USE_TZ = True
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')       
 STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY')  
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET') 
+
+#================================================ GEOIP ======================================================
+
+GEOIP_DB_PATH = os.path.join(BASE_DIR, 'data', 'geoip', 'GeoLite2-Country.mmdb')
+
 
 #================================================ EXTRAS ======================================================
 SECRET_KEY = config('SECRET_KEY')

@@ -10,7 +10,7 @@ from core.mixins import SentryErrorHandlerMixin, ViewSetSentryMixin
 from config.throttling import RegisterThrottle, SensitiveOperationThrottle, RegisterValidThrottle
 from auth.docs.request import RESEND_CONFIRMATION_EMAIL_REQUEST
 from core.responses.messages import AuthMessages, UserMessages
-from core.services.email_service import ConfirmUserEmail
+from core.services.email_service import AccountConfirmationEmail
 from django.conf import settings
 from django.core.mail import send_mail
 from auth.services import UsersRegisterService
@@ -56,7 +56,7 @@ class RegistrationAPIView(SentryErrorHandlerMixin,CreateAPIView):
 
         confirm_url= UsersRegisterService.get_confirmation_url(user)                    
 
-        ConfirmUserEmail.send_email(
+        AccountConfirmationEmail.send_email(
             to_email=user.email, 
             confirm_url=confirm_url, 
             nombre=user.username
@@ -113,7 +113,7 @@ class ResendTokenAPIView(SentryErrorHandlerMixin, CreateAPIView):
         
         confirm_url= UsersRegisterService.get_confirmation_url(user)                    
         
-        ConfirmUserEmail.send_email(
+        AccountConfirmationEmail.send_email(
             to_email=user.email, 
             confirm_url=confirm_url, 
             nombre=user.username
@@ -199,6 +199,7 @@ class VerifyEmailAPIView(SentryErrorHandlerMixin, APIView):
                 'email': user.email,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
+                'is_staff': user.is_staff
             }},
             status=status.HTTP_200_OK
         )

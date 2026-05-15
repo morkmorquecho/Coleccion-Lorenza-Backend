@@ -39,7 +39,7 @@ class EmailUpdateAPIViewTests(TestCase):
 
     def test_email_already_registered_returns_200_without_sending_email(self):
         make_user(username="other", email="ocupado@example.com")
-        with patch("core.services.email_service.UpdateUserEmail.send_email") as mock_send:  
+        with patch("core.services.email_service.EmailUpdatedEmail.send_email") as mock_send:  
             response = self.client.post(self.url, {"email": "ocupado@example.com", "password": self.password})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("message", response.data)
@@ -48,7 +48,7 @@ class EmailUpdateAPIViewTests(TestCase):
     # --- email nuevo ---
 
     @patch("users.views.UsersRegisterService.get_confirmation_url", return_value="http://confirm.url/token")
-    @patch("core.services.email_service.UpdateUserEmail.send_email")  
+    @patch("core.services.email_service.EmailUpdatedEmail.send_email")  
     def test_new_email_sends_confirmation_and_returns_200(self, mock_send, mock_url):
         response = self.client.post(self.url, {"email": "nuevo@example.com", "password": self.password})
         self.assertEqual(response.status_code, status.HTTP_200_OK)

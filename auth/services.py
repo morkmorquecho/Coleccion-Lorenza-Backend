@@ -14,7 +14,7 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from itsdangerous import URLSafeTimedSerializer
 from decouple import config
 from core.responses.messages import AuthMessages
-from core.services.email_service import ConfirmUserEmail, PasswordResetEmail
+from core.services.email_service import AccountConfirmationEmail, PasswordResetEmail
 
 FRONTEND_URL = config('FRONTEND_URL')
 
@@ -157,7 +157,7 @@ class UsersRegisterService:
     @staticmethod
     def get_confirmation_url(user, new_email=None):
         token = UsersRegisterService.generate_email_token(user, new_email)
-        return f"{FRONTEND_URL}/users/verify-email?token={token}"
+        return f"{FRONTEND_URL}/auth/email/verify?token={token}"
 
 
 class ChangePasswordService:
@@ -207,7 +207,7 @@ class LoginService:
 
         if user.last_login is None:
             confirm_url = UsersRegisterService.get_confirmation_url(user)
-            ConfirmUserEmail.send_email(
+            AccountConfirmationEmail.send_email(
                 to_email=user.email,
                 confirm_url=confirm_url,
                 nombre=user.username,

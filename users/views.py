@@ -10,7 +10,7 @@ from users.docs.schemas import ADDRESS_SET_DEFAULT, ADDRESS_VIEWSET, EMAIL_UPDAT
 from users.filters import AddressFilter
 from users.serializers import EmailUpdateSerializer, AddressSerializer, WishListSerializer
 from auth.services import UsersRegisterService
-from core.services.email_service import ConfirmUserEmail,UpdateUserEmail
+from core.services.email_service import EmailUpdatedEmail
 from django.contrib.auth import get_user_model
 from rest_framework.response import Response
 from rest_framework import viewsets, status, permissions
@@ -44,7 +44,7 @@ class EmailUpdateAPIView(SentryErrorHandlerMixin, GenericAPIView):
         
         # Si es un email nuevo, enviar confirmación
         confirm_url = UsersRegisterService.get_confirmation_url(user, email)
-        UpdateUserEmail.send_email(
+        EmailUpdatedEmail.send_email(
             to_email=email,
             confirm_url=confirm_url,
             nombre=user.username

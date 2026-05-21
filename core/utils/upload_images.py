@@ -11,6 +11,6 @@ def generate_upload_path(base_folder, instance, filename, purpose='general', own
         owner = getattr(instance, owner_field)
         owner_id = owner.pk
     else:
-        owner_id = instance.uid  
+        owner_id = instance.storage_id  
     unique_name = uuid4().hex[:12]
     return f"{base_folder}/{owner_id}/{purpose}/{unique_name}.{ext}"

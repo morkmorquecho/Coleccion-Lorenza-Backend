@@ -176,3 +176,8 @@ class ReviewSerializer(serializers.ModelSerializer):
             return super().create(validated_data)
         except DjangoValidationError as e:
             raise DRFValidationError(e.message_dict)
+
+class PiecePublicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Piece
+        fields = ['thumbnail_path', 'title', 'id']

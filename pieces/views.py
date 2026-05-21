@@ -12,7 +12,7 @@ from .models import PieceDiscount, PiecePhoto, Review, TypePiece, Section
 from core.permission import IsAdminOrAuthenticatedCreate, IsAdminOrReadOnly
 from pieces.filters import PieceFilter, ReviewFilter
 from pieces.models import Piece
-from pieces.serializer import PieceDiscountSerializer, PiecePhotoBulkCreateSerializer, PiecePhotoBulkDeleteSerializer, PiecePhotoReorderSerializer, PiecePhotoSerializer, PieceSerializer, ReviewSerializer, TypePieceSerializer, SectionSerializer
+from pieces.serializer import PieceDiscountSerializer, PiecePhotoBulkCreateSerializer, PiecePhotoBulkDeleteSerializer, PiecePhotoReorderSerializer, PiecePhotoSerializer, PiecePublicSerializer, PieceSerializer, ReviewSerializer, TypePieceSerializer, SectionSerializer
 from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -40,6 +40,16 @@ class PieceViewSet(ViewSetSentryMixin, ModelViewSet):
         if currency == 'USD':
             context['usd_rate'] = CurrencyService.get_usd_rate()
         return context
+
+    @action(detail=False, methods=['get'], url_path='basic')
+    def public_pieces(self, request):
+        pieces = Piece.objects.only(
+            'thumbnail_path',
+            'title'
+        )
+
+        serializer = PiecePublicSerializer(pieces, many=True)
+        return Response(serializer.data)
 
 @PIECE_PHOTO_VIEWSET
 class PiecePhotoViewSet(ViewSetSentryMixin, ModelViewSet):

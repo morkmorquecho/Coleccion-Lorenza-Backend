@@ -31,6 +31,7 @@ logging.getLogger('urllib3').setLevel(logging.WARNING)
 DEBUG = config('DEBUG')
 #========================================== APPS INSTALADAS ==========================================
 INSTALLED_APPS = [
+    'modeltranslation',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -378,6 +379,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -557,7 +559,7 @@ if not config('DEBUG', default=True, cast=bool):
 
 
 #-------------------------------------- IDIOMA - ZONA HORARIA  --------------------------------------------
-LANGUAGE_CODE = 'es-es'
+LANGUAGE_CODE = 'es'
 TIME_ZONE = 'America/Mexico_City'
 USE_I18N = True
 USE_TZ = True
@@ -572,6 +574,13 @@ STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
 #================================================ GEOIP ======================================================
 
 GEOIP_DB_PATH = os.path.join(BASE_DIR, 'data', 'geoip', 'GeoLite2-Country.mmdb')
+
+#================================================ PARLER LENGUAGE ============================================
+LANGUAGES = [
+    ('es', 'Español'),
+    ('en', 'English'),
+]
+
 
 
 #================================================ EXTRAS ======================================================

@@ -29,6 +29,7 @@ stripe = "*"
 google-auth = "*"
 geoip2 = "*"
 requests = "*"
+django-modeltranslation = "*"
 
 [dev-packages]
 

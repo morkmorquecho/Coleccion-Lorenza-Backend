@@ -1,11 +1,11 @@
 from django.contrib import admin
-
+from modeltranslation.admin import TranslationAdmin
 from blog.models import Blog
 from core.mixins import SoftDeleteAdminMixin
 
 @admin.register(Blog)
-class BlogAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
-    list_display = ('id','is_active',"title", "slug", "status", "published_at")
+class BlogAdmin(SoftDeleteAdminMixin, TranslationAdmin):
+    list_display = ('id', 'is_active', 'title', 'status', 'published_at')
     list_filter = ("status",)
     search_fields = ("title", "slug", "content")
     prepopulated_fields = {"slug": ("title",)}
@@ -21,7 +21,7 @@ class BlogAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
             "fields": ("pieces",)
         }),
         ("Publishing", {
-            "fields": ("status", "published_at")
+            "fields": ("status", "published_at", "section")
         }),
         ("Metadata", {
             "fields": ("created_at", "updated_at"),

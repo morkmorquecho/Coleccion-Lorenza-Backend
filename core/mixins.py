@@ -508,3 +508,14 @@ class CurrencyMixin:
             'MXN': amount,
             'USD': round(amount / rate, 2),
         }
+    
+
+class TranslatedFieldsMixin:
+    def _get_lang(self):
+        request = self.context.get('request')
+        raw = request.headers.get('Accept-Language', 'es') if request else 'es'
+        return raw if raw in {'es', 'en'} else 'es'
+
+    def get_translated(self, obj, field):
+        lang = self._get_lang()
+        return getattr(obj, f'{field}_{lang}', getattr(obj, f'{field}_es'))

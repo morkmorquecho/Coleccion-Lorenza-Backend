@@ -1,6 +1,6 @@
 from django.utils import timezone
 from decimal import Decimal
-from core.mixins import CurrencyMixin
+from core.mixins import CurrencyMixin, TranslatedFieldsMixin
 from pieces.models import Piece, PieceDiscount, PiecePhoto, Review, Section, TypePiece
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -8,17 +8,27 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from pieces.service import CurrencyService
 from pieces.utils import COUNTRY_MAP
-class TypePieceSerializer(serializers.ModelSerializer):
+class TypePieceSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
+    type = serializers.SerializerMethodField()
+
     class Meta:
         model = TypePiece
         fields = "__all__"
 
-class SectionSerializer(serializers.ModelSerializer):
+    def get_type(self, obj):
+        return self.get_translated(obj, 'type')
+
+class SectionSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
+    section = serializers.SerializerMethodField()
+
     class Meta:
         model = Section
         fields = "__all__"
 
-class PieceSerializer(CurrencyMixin,serializers.ModelSerializer):
+    def get_section(self, obj):
+        return self.get_translated(obj, 'section')
+
+class PieceSerializer(TranslatedFieldsMixin, CurrencyMixin, serializers.ModelSerializer):
     type = serializers.SlugRelatedField(slug_field='key', read_only=True)
     section = serializers.SlugRelatedField(slug_field='key', read_only=True)
 
@@ -34,7 +44,9 @@ class PieceSerializer(CurrencyMixin,serializers.ModelSerializer):
     discount_percentage = serializers.SerializerMethodField()
     final_price_base = serializers.SerializerMethodField()
     original_price_base = serializers.SerializerMethodField()  
-
+    title = serializers.SerializerMethodField()
+    slug = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
     class Meta:
         model = Piece
         fields = [
@@ -65,6 +77,15 @@ class PieceSerializer(CurrencyMixin,serializers.ModelSerializer):
             "original_price_base",#PRECIO DE LA PIEZA FINAL YA CON COMISIONES, ENVIO PEROOO SIN DESCUENTO PARA VISUALIZAR EN FRONT
         ]
     
+    def get_title(self, obj):
+        return self.get_translated(obj, 'title')
+
+    def get_slug(self, obj):
+        return self.get_translated(obj, 'slug')
+
+    def get_description(self, obj):
+        return self.get_translated(obj, 'description')
+
     def _get_region(self) -> str:
         request = self.context.get('request')
         if not request:
@@ -177,7 +198,12 @@ class ReviewSerializer(serializers.ModelSerializer):
         except DjangoValidationError as e:
             raise DRFValidationError(e.message_dict)
 
-class PiecePublicSerializer(serializers.ModelSerializer):
+class PiecePublicSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
+
     class Meta:
         model = Piece
         fields = ['thumbnail_path', 'title', 'id']
+
+    def get_title(self, obj):
+        return self.get_translated(obj, 'title')

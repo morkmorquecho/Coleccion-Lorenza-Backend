@@ -63,7 +63,6 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'blog.apps.BlogConfig',
     'orders.apps.OrdersConfig',
-    'reviews.apps.ReviewsConfig',
     'pieces.apps.PiecesConfig',
     'core',
     'cms.apps.CmsConfig',    

@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from blog.models import Blog
+from core.mixins import TranslatedFieldsMixin
 from pieces.models import Piece, Section
 
-class BlogSerializer(serializers.ModelSerializer):
+class BlogSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
     section = serializers.SlugRelatedField(
         slug_field='key',
         queryset=Section.objects.all()
@@ -16,6 +17,15 @@ class BlogSerializer(serializers.ModelSerializer):
     title = serializers.SerializerMethodField()
     slug = serializers.SerializerMethodField()
     content = serializers.SerializerMethodField()
+
+    def get_title(self, obj):
+        return self.get_translated(obj, 'title')
+
+    def get_slug(self, obj):
+        return self.get_translated(obj, 'slug')
+
+    def get_content(self, obj):
+        return self.get_translated(obj, 'content')
 
     class Meta:
         model = Blog

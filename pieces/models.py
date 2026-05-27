@@ -193,8 +193,9 @@ class ShippingRate(BaseModel):
 
 class Review(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    piece = models.ForeignKey(Piece, on_delete=models.CASCADE)
+    piece = models.ForeignKey(Piece, on_delete=models.CASCADE,blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
+    link_etsy = models.URLField(max_length=200, blank=True, null=True) 
     photo = models.ImageField(upload_to=upload_review_image, blank=True, null=True)
     rating = models.PositiveSmallIntegerField(
         validators=[

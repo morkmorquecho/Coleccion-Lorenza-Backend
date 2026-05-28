@@ -188,21 +188,7 @@ SOCIALACCOUNT_PROVIDERS = {
             'key': ''
         }
     },
-    
-    'facebook': {
-        'SCOPE': [
-            'email',
-            'public_profile'
-        ],
-        'AUTH_PARAMS': {
-            'auth_type': 'reauthenticate'
-        },
-        'APP': {
-            'client_id': config('FACEBOOK_APP_ID'),
-            'secret': config('FACEBOOK_APP_SECRET'),
-            'key': ''
-        }
-    }
+
 }
 GOOGLE_CLIENT_IDS = [
     config('ID_GOOGLE_CLIENT_WEB'),

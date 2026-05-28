@@ -87,21 +87,7 @@ GOOGLE = dict(
     }
 )
 
-FACEBOOK = dict(
-    summary="Autenticación con Facebook",
-    tags=["auth"],
-    description=(
-        "Autentica o registra usuarios mediante Facebook.\n\n"
-        "El email se verifica automáticamente.\n\n"
-    ),
 
-    request=GOOGLE_LOGIN_REQUEST,
-    responses={
-        200: JWT_SUCCES_RESPONSE,
-        400: RESPONSE_400_OAUTH,
-        429: lambda code: response_429(THROTTLE_HOUR, code),
-    }
-)
 #========================================== PASSWORD VIEWS ================================================
 
 PASSWORD_RESET_REQUEST = dict(

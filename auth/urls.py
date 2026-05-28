@@ -6,7 +6,7 @@ from auth.views.jwt_views import (
     LoginView, LogoutView, TokenRefreshView, TokenVerifyView
 )
 from auth.views.oauth_views import (
-    GoogleLoginView, FacebookLoginView
+    GoogleLoginView
 )
 from auth.views.password_views import (
     ChangePasswordView, PasswordResetRequestView, PasswordResetConfirmView
@@ -22,7 +22,6 @@ authentications_patterns = ([
     
     # ========== OAuth Social Login ==========
     path('oauth/google/', GoogleLoginView.as_view(), name='google_login'),
-    path('oauth/facebook/', FacebookLoginView.as_view(), name='facebook_login'),
     
     # ========== Password Management ==========
     path('password/reset/', PasswordResetRequestView.as_view(), name='password_reset'),

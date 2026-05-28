@@ -46,14 +46,14 @@ def deactivate_users(modeladmin, request, queryset):
 )
 
 
-# @admin.register(User)
-# class CustomUserAdmin(UserAdmin):
-#     actions = [deactivate_users]
-#     list_display = (
-#         "id",
-#         "username",
-#         "email",
-#         "is_active",
-#         "last_login",
-#         "date_joined",
-#     )
+@admin.register(User)
+class CustomUserAdmin(UserAdmin):
+    actions = [deactivate_users]
+    list_display = (
+        "id",
+        "username",
+        "email",
+        "is_active",
+        "last_login",
+        "date_joined",
+    )

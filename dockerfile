@@ -11,9 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Exportar requirements desde Pipfile y instalar
-COPY Pipfile Pipfile.lock ./
-RUN pip install --upgrade pip pipenv \
-    && pipenv requirements > requirements.txt \
+COPY requirements.txt .
+RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
 

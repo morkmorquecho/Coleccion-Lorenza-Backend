@@ -4,7 +4,6 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.utils import timezone
-from auth.adapters import User
 from core.models import BaseModel
 from core.utils.validations import validate_date_range
 from django.apps import apps
@@ -12,6 +11,9 @@ from pieces.utils import ceil_to_10, uplaod_intro_video, upload_piece_image, upl
 from django.core.validators import MinValueValidator, MaxValueValidator
 from decouple import config
 from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 COMMISSION_STRIPE = Decimal(config('COMMISSION_STRIPE'))
 COMISSION_PROCESS_STRIPE = Decimal(config('COMISSION_PROCESS_STRIPE'))

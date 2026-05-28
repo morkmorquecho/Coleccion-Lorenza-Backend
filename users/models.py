@@ -1,19 +1,17 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser, User
+from django.contrib.auth.models import AbstractUser
 from core.models import BaseModel 
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.core.exceptions import ValidationError
-
-from pieces.models import Piece
 
 phone_regex = RegexValidator(
     regex=r'^\+?1?\d{9,15}$',
     message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
 )
 
-# class User(AbstractUser):
-#     email = models.EmailField(unique=True) 
-#     REQUIRED_FIELDS = ['email']
+class User(AbstractUser):
+    email = models.EmailField(unique=True) 
+    REQUIRED_FIELDS = ['email']
 
 class Address(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses') 
@@ -53,7 +51,7 @@ class Address(BaseModel):
 
 class WishList(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    piece = models.ForeignKey(Piece, on_delete=models.CASCADE)
+    piece = models.ForeignKey('pieces.Piece', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)

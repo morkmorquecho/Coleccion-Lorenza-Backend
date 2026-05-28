@@ -103,8 +103,7 @@ if 'test' in sys.argv:
         'NAME': ':memory:',
     }
 
-# descomentar
-# AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'users.User'
 
 #================================================= PASSWORD VALIDATORS =================================================
 AUTH_PASSWORD_VALIDATORS = [
@@ -588,7 +587,11 @@ DEBUG = config('DEBUG', cast=bool)
 WSGI_APPLICATION = 'config.wsgi.application'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
 
 ROOT_URLCONF = 'config.urls'
 

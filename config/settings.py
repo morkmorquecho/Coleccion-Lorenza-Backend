@@ -302,6 +302,12 @@ CORS_ALLOWED_ORIGINS = config(
     cast=lambda v: [s.strip() for s in v.split(",") if s]
 )
 
+CSRF_TRUSTED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:3000,http://localhost:5173",
+    cast=lambda v: [s.strip() for s in v.split(",") if s]
+)
+
 # Permitir envío de cookies cross-origin
 CORS_ALLOW_CREDENTIALS = True 
 

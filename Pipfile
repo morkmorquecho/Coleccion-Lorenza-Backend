@@ -31,6 +31,7 @@ geoip2 = "*"
 requests = "*"
 django-modeltranslation = "*"
 gunicorn = "*"
+whitenoise = "*"
 
 [dev-packages]
 

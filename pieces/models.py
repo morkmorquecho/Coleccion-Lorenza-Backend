@@ -194,39 +194,88 @@ class ShippingRate(BaseModel):
         return f"{self.region} - {self.kg}kg: ${self.cost}"
 
 class Review(BaseModel):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    piece = models.ForeignKey(Piece, on_delete=models.CASCADE,blank=True, null=True)
+    class ReviewType(models.TextChoices):
+        INTERNAL = 'internal', 'Reseña de usuario'
+        EXTERNAL = 'external', 'Reseña externa (Etsy, etc.)'
+
+    review_type = models.CharField(
+        max_length=10,
+        choices=ReviewType.choices,
+        default=ReviewType.INTERNAL
+    )
+
+    # --- Autor: solo uno de los dos estará presente ---
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        blank=True, null=True,
+        related_name='reviews'
+    )
+    external_author = models.CharField(  # Para reseñas de Etsy
+        max_length=150,
+        blank=True, null=True
+    )
+
+    # --- Resto de campos ---
+    piece = models.ForeignKey(Piece, on_delete=models.CASCADE, blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
-    link_etsy = models.URLField(max_length=200, blank=True, null=True) 
+    link_etsy = models.URLField(max_length=200, blank=True, null=True)
     photo = models.ImageField(upload_to=upload_review_image, blank=True, null=True)
     rating = models.PositiveSmallIntegerField(
-        validators=[
-            MinValueValidator(1),
-            MaxValueValidator(5)
-        ]
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
-    
+    created_at = models.DateTimeField(auto_now_add=True)  # recomendado
+
     class Meta:
         verbose_name = 'Reseña'
         verbose_name_plural = 'Reseñas'
-
+        constraints = [
+            # Un usuario solo puede reseñar una pieza una vez
+            models.UniqueConstraint(
+                fields=['user', 'piece'],
+                condition=models.Q(review_type='internal'),
+                name='unique_internal_review_per_user_piece'
+            )
+        ]
 
     def clean(self):
-        OrderItem = apps.get_model('orders', 'OrderItem')
+        if self.review_type == self.ReviewType.INTERNAL:
+            self._validate_internal()
+        elif self.review_type == self.ReviewType.EXTERNAL:
+            self._validate_external()
 
+    def _validate_internal(self):
+        if not self.user_id:
+            raise ValidationError("Las reseñas internas requieren un usuario.")
+        if self.external_author:
+            raise ValidationError("Las reseñas internas no deben tener autor externo.")
+        if not self.piece_id:
+            return
+        if self.user.is_staff or self.user.is_superuser:
+            return
+
+        OrderItem = apps.get_model('orders', 'OrderItem')
         has_purchased = OrderItem.objects.filter(
             order__user=self.user,
             piece=self.piece,
             order__status__in=['paid', 'shipped']
         ).exists()
-        
+
         if not has_purchased:
             raise ValidationError("Solo puedes reseñar piezas que hayas comprado.")
-        
-    def save(self, *args, **kwargs):
-        self.full_clean() 
-        super().save(*args, **kwargs)
 
+    def _validate_external(self):
+        if not self.external_author:
+            raise ValidationError("Las reseñas externas requieren un nombre de autor.")
+        if self.user_id:
+            raise ValidationError("Las reseñas externas no deben tener usuario del sistema.")
+
+    @property
+    def author_display(self):
+        """Nombre a mostrar en el frontend, independiente del tipo."""
+        if self.review_type == self.ReviewType.INTERNAL:
+            return self.user.get_full_name() or self.user.username
+        return self.external_author
 
     def __str__(self):
-        return f'reseña de {self.user} a {self.piece.title}'
+        return f'Reseña de {self.author_display} a {self.piece.title if self.piece else "sin pieza"}'

@@ -185,18 +185,23 @@ class PieceDiscountSerializer(serializers.ModelSerializer):
         fields = ['id','piece' ,'percentage']    
 
 class ReviewSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField(read_only=True)
+    user = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
-        fields = '__all__'
-        read_only_fields = ['user']
+        fields = ['id', 'piece', 'comment', 'rating', 'photo', 'link_etsy', 'user', 'created_at']
 
-    def create(self, validated_data):
-        try:
-            return super().create(validated_data)
-        except DjangoValidationError as e:
-            raise DRFValidationError(e.message_dict)
+    def get_user(self, obj):
+        if obj.review_type == Review.ReviewType.INTERNAL:
+            return obj.user.get_full_name() or obj.user.username
+        return obj.external_author
+
+
+class ExternalReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['id', 'piece', 'external_author', 'comment', 'rating',
+                  'photo', 'link_etsy', 'review_type', 'created_at']
 
 class PiecePublicSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
     title = serializers.SerializerMethodField()

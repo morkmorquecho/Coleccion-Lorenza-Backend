@@ -12,10 +12,11 @@ from .models import PieceDiscount, PiecePhoto, Review, TypePiece, Section
 from core.permission import IsAdminOrAuthenticatedCreate, IsAdminOrReadOnly
 from pieces.filters import PieceFilter, ReviewFilter
 from pieces.models import Piece
-from pieces.serializer import PieceDiscountSerializer, PiecePhotoBulkCreateSerializer, PiecePhotoBulkDeleteSerializer, PiecePhotoReorderSerializer, PiecePhotoSerializer, PiecePublicSerializer, PieceSerializer, ReviewSerializer, TypePieceSerializer, SectionSerializer
+from pieces.serializer import ExternalReviewSerializer, PieceDiscountSerializer, PiecePhotoBulkCreateSerializer, PiecePhotoBulkDeleteSerializer, PiecePhotoReorderSerializer, PiecePhotoSerializer, PiecePublicSerializer, PieceSerializer, ReviewSerializer, TypePieceSerializer, SectionSerializer
 from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 
 @PIECE_VIEWSET
 class PieceViewSet(ViewSetSentryMixin, ModelViewSet):
@@ -220,12 +221,29 @@ class SectionViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
 
 @REVIEW_VIEWSET
 class ReviewViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.all()
+    queryset = Review.objects.select_related('user', 'piece').all()
     serializer_class = ReviewSerializer
     permission_classes = [IsAdminOrAuthenticatedCreate]
     filter_backends = [DjangoFilterBackend]
-    filterset_class = ReviewFilter  
+    filterset_class = ReviewFilter
+
+    def get_serializer_class(self):
+        # Serializer diferente según tipo de reseña
+        review_type = self.request.data.get('review_type', 'internal')
+        if review_type == Review.ReviewType.EXTERNAL:
+            return ExternalReviewSerializer  # Solo admins lo usan
+        return ReviewSerializer
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        review_type = self.request.data.get('review_type', 'internal')
 
+        if review_type == Review.ReviewType.EXTERNAL:
+            # Solo admins pueden crear reseñas externas
+            if not self.request.user.is_staff:
+                raise PermissionDenied("Solo administradores pueden subir reseñas externas.")
+            serializer.save(review_type=Review.ReviewType.EXTERNAL)
+        else:
+            serializer.save(
+                user=self.request.user,
+                review_type=Review.ReviewType.INTERNAL
+            )

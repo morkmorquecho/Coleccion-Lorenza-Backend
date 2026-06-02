@@ -513,7 +513,7 @@ if config('CACHES_REDIS', default=False, cast=bool) == True:
         CACHES = {
             'default': {
                 'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-                'LOCATION': os.getenv('REDIS_PRIVATE_URL'),
+                'LOCATION': os.getenv('REDIS_URL'),
                 'OPTIONS': {
                     'socket_connect_timeout': 5,
                     'socket_timeout': 5,

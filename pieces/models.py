@@ -244,6 +244,11 @@ class Review(BaseModel):
         elif self.review_type == self.ReviewType.EXTERNAL:
             self._validate_external()
 
+    def save(self, *args, **kwargs):
+        if self.link_etsy and '#reviews' not in self.link_etsy:
+            self.link_etsy = self.link_etsy.rstrip('/') + '#reviews'
+        super().save(*args, **kwargs)
+
     def _validate_internal(self):
         if not self.user_id:
             raise ValidationError("Las reseñas internas requieren un usuario.")

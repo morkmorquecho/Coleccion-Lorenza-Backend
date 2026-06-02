@@ -1,45 +1,54 @@
-FROM python:3.11-slim
-
-# Variables limpias
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PIP_NO_CACHE_DIR=1
+# ─── Stage 1: instalar dependencias ─────────────────────────────────────────
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-
-# Dependencias del sistema + ODBC + build tools
-RUN apt-get update && apt-get install -y \
-    curl \
-    gnupg2 \
-    unixodbc \
-    unixodbc-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libssl-dev \
-    libffi-dev \
-    && curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor \
-        -o /usr/share/keyrings/microsoft-prod.gpg \
-    && curl https://packages.microsoft.com/config/debian/12/prod.list \
-        > /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y msodbcsql18 \
-    && apt-get clean \
+    libpq-dev \
+    libjpeg-dev \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Pipenv
-RUN pip install --upgrade pip pipenv
+# Exportar requirements desde Pipfile y instalar
+COPY requirements.txt .
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Copiamos Pipfiles primero (cache friendly)
-COPY Pipfile Pipfile.lock ./
 
-# Instala todas las dependencias de Python directamente en el sistema
-RUN pipenv install --system --deploy
+# ─── Stage 2: imagen final ────────────────────────────────────────────────────
+FROM python:3.11-slim
 
-# Copiamos el proyecto
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=config.settings
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    libjpeg62-turbo \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar paquetes instalados
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copiar código del proyecto
 COPY . .
 
-# Expone el puerto del server Django
+# Copiar y dar permisos al entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Usuario sin privilegios (seguridad)
+RUN useradd --no-create-home --shell /bin/false django \
+    && mkdir -p /app/staticfiles /app/logs \
+    && chown -R django:django /app /entrypoint.sh
+
+USER django
+
 EXPOSE 8000
 
-# Comando para iniciar Django
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Railway inyecta $PORT automáticamente (normalmente 8000)
+CMD ["/entrypoint.sh"]

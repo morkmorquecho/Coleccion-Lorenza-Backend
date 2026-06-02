@@ -1,5 +1,7 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from core.models import BaseModel
 from core.utils.validations import validate_date_range
 from pieces.models import Piece
@@ -12,8 +14,8 @@ TRACKING_URLS = {
 class Coupon(BaseModel):
     code = models.CharField(max_length=100, unique=True)
     percentage = models.DecimalField(max_digits=3, decimal_places=1)
-    valid_from = models.DateField()
-    valid_until = models.DateField()
+    valid_from = models.DateField(db_index=True)           
+    valid_until = models.DateField(db_index=True)  
 
     class Meta:
         verbose_name = ("Cupon")
@@ -24,22 +26,38 @@ class Coupon(BaseModel):
 
     def __str__(self):
         return f"{self.code} ({self.percentage}%)"
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=["valid_from", "valid_until"], name="coupon_validity_idx"),
+        ]
 
 class Order(BaseModel):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('paid', 'Paid'),
-        ('shipped', 'Shipped'),
         ('cancelled', 'Cancelled'),
     ]
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     total = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
+    address = models.ForeignKey(Address, on_delete=models.CASCADE, related_name='orders')
 
     class Meta:
-        verbose_name = ("Pedido")
-        verbose_name_plural = ("Pedidos")
+        indexes = [
+            models.Index(fields=["user", "status"], name="order_user_status_idx"),
+        ]
+
+    def can_be_cancelled(self) -> bool:
+        if self.status == 'cancelled':
+            return False
+
+        tracking = self.trakings.first()
+
+        if tracking is None:
+            return False
+
+        return tracking.status == 'pending'
 
     def __str__(self):
         return f"Order #{self.id} - {self.user.username} - {self.status}"
@@ -47,14 +65,15 @@ class Order(BaseModel):
 
 class OrderItem(BaseModel):
 
-    piece = models.ForeignKey(Piece, on_delete=models.CASCADE)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    piece = models.ForeignKey(Piece, on_delete=models.CASCADE, related_name='orders_items')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     quantity = models.IntegerField()
     price_snapshot = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
-        verbose_name = ("Ítem de Pedido")
-        verbose_name_plural = ("Piezas del pedido")
+        indexes = [
+            models.Index(fields=["order", "piece"], name="orderitem_order_piece_idx"),
+        ]
 
     def __str__(self):
         return f"{self.quantity} x {self.piece} (Order #{self.order.id})"
@@ -62,8 +81,9 @@ class OrderItem(BaseModel):
 class ShippingTracking(BaseModel):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
-        ('in_transit', 'In Transit'),
+        ('shipped', 'Shipped'),
         ('delivered', 'Delivered'),
+        ('cancelled', 'Cancelled'),
     ]
     
     CARRIER_CHOICES = [
@@ -71,26 +91,33 @@ class ShippingTracking(BaseModel):
         ('ups', 'UPS'),
         ('fedex', 'FedEx'),
     ]
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    carrier = models.CharField(max_length=50, choices=CARRIER_CHOICES)
-    tracking_number = models.CharField(max_length=100)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
-    shipped_at = models.DateTimeField (null=True, blank=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='trakings')
+    carrier = models.CharField(max_length=50, choices=CARRIER_CHOICES, default='fedex')
+    tracking_number = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
+    shipped_at = models.DateTimeField (null=True, blank=True, db_index=True) 
     delivered_at = models.DateTimeField (null=True, blank=True)
 
     class Meta:
         verbose_name = ("Rastreo de pedido")
-        verbose_name_plural = ("Rastreo de pedidos")   
-
-    def __str__(self):
-        return f"{self.carrier.upper()} - {self.tracking_number} ({self.status})"
+        verbose_name_plural = ("Rastreo de pedidos") 
+        ordering = ['-created_at']
 
 
     def get_tracking_url(self):
+        if not self.tracking_number:
+            return None
+        
         url_template = TRACKING_URLS.get(self.carrier.lower())
         if url_template:
             return url_template.format(self.tracking_number)
         return None
+    
+    def get_owner_id(self):
+        return self.order.user_id
+
+    def __str__(self):
+        return f"{self.carrier.upper()} - {self.tracking_number} ({self.status})"
     
 class Payment(BaseModel):
     STATUS_CHOICES = [
@@ -98,29 +125,30 @@ class Payment(BaseModel):
         ('completed', 'Completed'),
         ('failed', 'Failed'),
     ]
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=50)
-    external_id = models.CharField(max_length=250)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    external_id = models.CharField(max_length=250, db_index=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending' ,db_index=True)
 
     class Meta:
-        verbose_name = ("Registro de Pago")
-        verbose_name_plural = ("Registros de Pagos")   
+        indexes = [
+            models.Index(fields=["order", "status"], name="payment_order_status_idx"),
+        ]   
 
     def __str__(self):
         return f"Pago {self.id} - {self.order} - {self.status}"
 
 class CouponUsage(BaseModel):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='coupon_usage')
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, related_name='usages')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='coupon_usage')
     discount_applied = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
-        verbose_name = ("Registro de cupon usado")
-        verbose_name_plural = ("Registros de cupones usados")  
-        
+        indexes = [
+            models.Index(fields=["coupon"], name="couponusage_coupon_idx"), 
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "coupon"],
@@ -130,3 +158,16 @@ class CouponUsage(BaseModel):
 
     def __str__(self):
         return f"{self.user.username} usó {self.coupon.code} en Order #{self.order.id}"
+
+
+class ExchangeRate(models.Model):
+    usd_to_mxn = models.DecimalField(max_digits=10, decimal_places=4)
+    fetched_at = models.DateTimeField(db_index=True) 
+    source     = models.CharField(max_length=255)
+
+    class Meta:
+        verbose_name = ("Tipo de Cambio")
+        verbose_name_plural = ("Tipos de Cambio")
+
+    def __str__(self):
+        return f"USD a MXN: {self.usd_to_mxn} ({self.fetched_at.strftime('%d/%m/%Y')})"  

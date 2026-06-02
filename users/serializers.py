@@ -1,7 +1,11 @@
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from allauth.account import app_settings as allauth_settings
 from django.contrib.auth.hashers import check_password
-from .models import Address
+
+from core.responses.messages import ErrorMessages
+from pieces.models import Piece
+from pieces.serializer import PieceSerializer
+from .models import Address, WishList
 from rest_framework import serializers
 
 class CustomRegisterSerializer(RegisterSerializer):
@@ -71,3 +75,30 @@ class AddressSerializer(serializers.ModelSerializer):
         if validated_data.get('is_default'):
             Address.objects.filter(user=user, is_default=True).exclude(pk=instance.pk).update(is_default=False)
         return super().update(instance, validated_data)
+    
+# serializers.py
+class WishListSerializer(serializers.ModelSerializer):
+    piece = PieceSerializer(read_only=True)        
+    piece_id = serializers.PrimaryKeyRelatedField(  
+        queryset=Piece.objects.all(),
+        source='piece',
+        write_only=True
+    )
+    
+
+    class Meta:
+        model = WishList
+        fields = ['id', 'piece', 'piece_id', 'is_active']
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        piece = attrs['piece']
+
+        if WishList.objects.filter(user=user, piece=piece, is_active=True).exists():
+            raise serializers.ValidationError(ErrorMessages.WishList.ALREADY_EXIST)
+
+        return attrs
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)

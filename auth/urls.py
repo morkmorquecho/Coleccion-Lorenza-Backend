@@ -6,10 +6,10 @@ from auth.views.jwt_views import (
     LoginView, LogoutView, TokenRefreshView, TokenVerifyView
 )
 from auth.views.oauth_views import (
-    GoogleLoginView, FacebookLoginView
+    GoogleLoginView
 )
 from auth.views.password_views import (
-    PasswordResetRequestView, PasswordResetConfirmView
+    ChangePasswordView, PasswordResetRequestView, PasswordResetConfirmView
 )
 from auth.views.user_views import  RegistrationAPIView, ResendTokenAPIView, VerifyEmailAPIView
 
@@ -22,14 +22,15 @@ authentications_patterns = ([
     
     # ========== OAuth Social Login ==========
     path('oauth/google/', GoogleLoginView.as_view(), name='google_login'),
-    path('oauth/facebook/', FacebookLoginView.as_view(), name='facebook_login'),
     
     # ========== Password Management ==========
     path('password/reset/', PasswordResetRequestView.as_view(), name='password_reset'),
     path('password/reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('password/change/', ChangePasswordView.as_view(), name='change_password'),
+
 
     # ========== Register User ============
     path('register/', RegistrationAPIView.as_view(), name='register'),
-    path('verify/', VerifyEmailAPIView.as_view(), name='confirm_user'),
+    path('email/verify/', VerifyEmailAPIView.as_view(), name='confirm_user'),
     path('resend-token/', ResendTokenAPIView.as_view(), name='resend_token')
 ], 'auth')

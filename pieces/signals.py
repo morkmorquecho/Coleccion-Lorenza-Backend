@@ -1,67 +1,72 @@
 # signals.py
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
+from core.utils.storages import delete_file_fields, delete_if_changed
+from .models import Piece, PiecePhoto, Review
 
-from core.utils.storages import borrar_archivo_storage
-from .models import Piece, PiecePhoto
+#========================= PIECE =============================
+CAMPOS_PIECE = ['thumbnail_path', 'intro_video']
 
-
-#=========================================== THUMBNAIL_PATH - PIECE ===========================================
 @receiver(post_delete, sender=Piece)
-def borrar_imagen_al_eliminar(sender, instance, **kwargs):
-    """Cuando se elimina el piece, borra su imagen de R2."""
-    borrar_archivo_storage(instance.thumbnail_path)
+def borrar_archivos_piece_al_eliminar(sender, instance, **kwargs):
+    delete_file_fields(instance, CAMPOS_PIECE)
 
 
 @receiver(pre_save, sender=Piece)
-def borrar_imagen_anterior_al_actualizar(sender, instance, **kwargs):
-    """Cuando se actualiza la imagen o se desactiva el piece, borra la imagen de R2."""
+def borrar_archivos_piece_al_actualizar(sender, instance, **kwargs):
     if not instance.pk:
-        return  # Es un objeto nuevo, no hay imagen anterior
-
+        return
     try:
-        piece_anterior = Piece.objects.get(pk=instance.pk)
-        imagen_anterior = piece_anterior.thumbnail_path
+        anterior = Piece.objects.get(pk=instance.pk)
     except Piece.DoesNotExist:
         return
 
-    # Caso 1: se desactivó el piece (is_active cambió a False)
-    if piece_anterior.is_active and not instance.is_active:
-        borrar_archivo_storage(imagen_anterior)
-        # Borrar también las imágenes de los PiecePhoto asociados
+    # Si se desactiva la pieza, borrar todos sus archivos y fotos
+    if anterior.is_active and not instance.is_active:
+        delete_file_fields(anterior, CAMPOS_PIECE)
         for photo in instance.photos.all():
-            photo.delete()  # hard delete + borra archivo
+            photo.delete()
         return
 
-    # Caso 2: la imagen cambió
-    imagen_nueva = instance.thumbnail_path
-    imagen_nueva_name = imagen_nueva.name if imagen_nueva else None
-
-    if imagen_anterior and imagen_anterior.name and imagen_anterior.name != imagen_nueva_name:
-        borrar_archivo_storage(imagen_anterior)
+    # Borrar archivos solo si cambiaron
+    delete_if_changed(anterior, instance, CAMPOS_PIECE)
 
 
-#=========================================== IMAGE_PATH - PHOTO PIECE ===========================================
+#========================= IMAGE_PATH - PIECE PHOTO ========================================
+CAMPOS_PIECE_PHOTO = ['image_path']
+
 @receiver(post_delete, sender=PiecePhoto)
 def borrar_imagen_photo_al_eliminar(sender, instance, **kwargs):
-    """Cuando se elimina el PiecePhoto, borra su imagen de R2."""
-    borrar_archivo_storage(instance.image_path)
+    delete_file_fields(instance, CAMPOS_PIECE_PHOTO)
 
 
 @receiver(pre_save, sender=PiecePhoto)
 def borrar_imagen_photo_anterior_al_actualizar(sender, instance, **kwargs):
-    """Cuando se actualiza la imagen de un PiecePhoto, borra la anterior de R2."""
     if not instance.pk:
         return
-
     try:
-        photo_anterior = PiecePhoto.objects.get(pk=instance.pk)
-        imagen_anterior = photo_anterior.image_path
+        anterior = PiecePhoto.objects.get(pk=instance.pk)
     except PiecePhoto.DoesNotExist:
         return
 
-    imagen_nueva = instance.image_path
-    imagen_nueva_name = imagen_nueva.name if imagen_nueva else None
+    delete_if_changed(anterior, instance, CAMPOS_PIECE_PHOTO)
 
-    if imagen_anterior and imagen_anterior.name and imagen_anterior.name != imagen_nueva_name:
-        borrar_archivo_storage(imagen_anterior)
+
+#========================= PHOTO - REVIEW ========================================
+CAMPOS_REVIEW = ['photo']
+
+@receiver(post_delete, sender=Review)
+def borrar_review_photo_al_eliminar(sender, instance, **kwargs):
+    delete_file_fields(instance, CAMPOS_REVIEW)
+
+
+@receiver(pre_save, sender=Review)
+def borrar_review_photo_anterior_al_actualizar(sender, instance, **kwargs):
+    if not instance.pk:
+        return
+    try:
+        anterior = Review.objects.get(pk=instance.pk)
+    except Review.DoesNotExist:
+        return
+
+    delete_if_changed(anterior, instance, CAMPOS_REVIEW)

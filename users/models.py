@@ -1,20 +1,25 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
 from core.models import BaseModel 
-from django.core.validators import RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
+from django.core.exceptions import ValidationError
 
 phone_regex = RegexValidator(
     regex=r'^\+?1?\d{9,15}$',
     message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
 )
 
+class User(AbstractUser):
+    email = models.EmailField(unique=True) 
+    REQUIRED_FIELDS = ['email']
+
 class Address(BaseModel):
-    user = models.ForeignKey(User, on_delete=models.CASCADE) 
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses') 
     recipient_name = models.CharField(max_length=200)    
     country = models.CharField(max_length=50, choices=[
-        ('mexico', 'Mexico'),
-        ('usa', 'Estados Unidos'),
-        ('canada', 'Canada')])
+        ('mexico', 'MX'),
+        ('usa', 'US'),
+        ('canada', 'US')])
     state = models.CharField(max_length=100) 
     city = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=20)
@@ -25,11 +30,38 @@ class Address(BaseModel):
     reference = models.TextField()
     apartment_number = models.CharField(max_length=20, blank=True, null=True)
     is_default = models.BooleanField(default=False)
-    
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        if is_new:
+            only_one = not Address.objects.filter(user=self.user).exclude(pk=self.pk).exists()
+            if only_one:
+                self.is_default = True
+                Address.objects.filter(pk=self.pk).update(is_default=True)
+
     class Meta:
         verbose_name = 'Direccion'
         verbose_name_plural = 'Direcciones'
-
+        app_label = 'users'
 
     def __str__(self):
         return f"{self.street} {self.street_number}, {self.city}"
+
+class WishList(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    piece = models.ForeignKey('pieces.Piece', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    class Meta:
+        verbose_name = 'Lista de favorito'
+        verbose_name_plural = 'Lista de favoritos'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user} fav: {self.piece.title}'
+    
+

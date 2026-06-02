@@ -1,19 +1,34 @@
 from django.utils import timezone
 from decimal import Decimal
-from pieces.models import Piece, PieceDiscount, PiecePhoto, Section, TypePiece
+from core.mixins import CurrencyMixin, TranslatedFieldsMixin
+from pieces.models import Piece, PieceDiscount, PiecePhoto, Review, Section, TypePiece
 from rest_framework import serializers
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
-class TypePieceSerializer(serializers.ModelSerializer):
+from pieces.service import CurrencyService
+from pieces.utils import COUNTRY_MAP
+class TypePieceSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
+    type = serializers.SerializerMethodField()
+
     class Meta:
         model = TypePiece
         fields = "__all__"
 
-class SectionSerializer(serializers.ModelSerializer):
+    def get_type(self, obj):
+        return self.get_translated(obj, 'type')
+
+class SectionSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
+    section = serializers.SerializerMethodField()
+
     class Meta:
         model = Section
         fields = "__all__"
 
-class PieceSerializer(serializers.ModelSerializer):
+    def get_section(self, obj):
+        return self.get_translated(obj, 'section')
+
+class PieceSerializer(TranslatedFieldsMixin, CurrencyMixin, serializers.ModelSerializer):
     type = serializers.SlugRelatedField(slug_field='key', read_only=True)
     section = serializers.SlugRelatedField(slug_field='key', read_only=True)
 
@@ -28,7 +43,10 @@ class PieceSerializer(serializers.ModelSerializer):
     has_discount = serializers.SerializerMethodField()
     discount_percentage = serializers.SerializerMethodField()
     final_price_base = serializers.SerializerMethodField()
-
+    original_price_base = serializers.SerializerMethodField()  
+    title = serializers.SerializerMethodField()
+    slug = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
     class Meta:
         model = Piece
         fields = [
@@ -37,8 +55,9 @@ class PieceSerializer(serializers.ModelSerializer):
             "slug",
             "description",
             "thumbnail_path",
+            "intro_video",
             "quantity",
-            "price_base",
+            "price_base", #PRECIO NETO DE LA PIEZA SIN ENVIO, NI COMISIONES
             "width",
             "height",
             "length",
@@ -49,45 +68,53 @@ class PieceSerializer(serializers.ModelSerializer):
             "type_id",    
             "section",    
             "section_id", 
+            "created_at",
             
             # calculados
             "has_discount",
             "discount_percentage",
-            "final_price_base",
+            "final_price_base", #PRECIO DE LA PIEZA FINAL YA CON COMISIONES, ENVIO Y DESCUENTOS
+            "original_price_base",#PRECIO DE LA PIEZA FINAL YA CON COMISIONES, ENVIO PEROOO SIN DESCUENTO PARA VISUALIZAR EN FRONT
         ]
+    
+    def get_title(self, obj):
+        return self.get_translated(obj, 'title')
 
-    def _get_active_discount(self, obj):
-        """Busca el descuento activo y lo cachea en el contexto del objeto."""
-        if not hasattr(obj, "_active_discount"):
-            today = timezone.now().date()
-            piece_discount = (
-                obj.discounts.filter(
-                    deleted_at__isnull=True,
-                    discount__start_date__lte=today,
-                    discount__end_date__gte=today,
-                )
-                .select_related("discount")
-                .first()
-            )
-            obj._active_discount = piece_discount.discount if piece_discount else None
-        return obj._active_discount
+    def get_slug(self, obj):
+        return self.get_translated(obj, 'slug')
 
+    def get_description(self, obj):
+        return self.get_translated(obj, 'description')
+
+    def _get_region(self) -> str:
+        request = self.context.get('request')
+        if not request:
+            return 'US'
+
+        if request.user.is_authenticated:
+            address = request.user.addresses.filter(is_default=True).first()
+            if address:
+                return COUNTRY_MAP.get(address.country, 'US')
+
+        return getattr(request, 'detected_country', 'US')
+
+
+    def get_final_price_base(self, obj) -> dict:
+        region = self._get_region()
+        price_mxn = obj.get_final_price(region, apply_discount=True)
+        return self._to_currencies(price_mxn)
+
+    def get_original_price_base(self, obj) -> dict:
+        region = self._get_region()
+        price_mxn = obj.get_final_price(region, apply_discount=False)
+        return self._to_currencies(price_mxn)
+    
     def get_has_discount(self, obj) -> bool:
-        return self._get_active_discount(obj) is not None
+        return obj.get_active_discount() is not None
 
     def get_discount_percentage(self, obj) -> float | None:
-        discount = self._get_active_discount(obj)
+        discount = obj.get_active_discount()
         return discount.percentage if discount else None
-
-    def _apply_discount(self, price, discount):
-        if not discount:
-            return price
-        factor = 1 - (Decimal(discount.percentage) / Decimal("100"))
-        return round(price * factor, 2)
-
-    def get_final_price_base(self, obj) -> float:
-        return self._apply_discount(obj.get_final_price('MX'), self._get_active_discount(obj))
-
     
 class PiecePhotoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -156,3 +183,32 @@ class PieceDiscountSerializer(serializers.ModelSerializer):
     class Meta:
         model = PieceDiscount
         fields = ['id','piece' ,'percentage']    
+
+class ReviewSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Review
+        fields = ['id', 'piece', 'comment', 'rating', 'photo', 'link_etsy', 'user', 'created_at']
+
+    def get_user(self, obj):
+        if obj.review_type == Review.ReviewType.INTERNAL:
+            return obj.user.get_full_name() or obj.user.username
+        return obj.external_author
+
+
+class ExternalReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['id', 'piece', 'external_author', 'comment', 'rating',
+                  'photo', 'link_etsy', 'review_type', 'created_at']
+
+class PiecePublicSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Piece
+        fields = ['thumbnail_path', 'title', 'id']
+
+    def get_title(self, obj):
+        return self.get_translated(obj, 'title')

@@ -26,6 +26,13 @@ def fake_image(name='test.jpg'):
     return SimpleUploadedFile(name, buf.read(), content_type='image/jpeg')
 
 
+def fake_video(name='test.mp4'):
+    """Genera un archivo de video simulado en memoria."""
+    buf = io.BytesIO(b'\x00' * 1024)  # 1 KB de bytes nulos como video falso
+    buf.seek(0)
+    return SimpleUploadedFile(name, buf.read(), content_type='video/mp4')
+
+
 def piece_payload(type_piece, section, title='Mi Pieza', **kwargs):
     """Payload base con todos los campos requeridos de Piece."""
     data = {
@@ -283,3 +290,96 @@ class PieceFilterTest(PieceBaseTestCase):
         response = self.client.get(LIST_URL, {'type': self.other_type.key})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 0)
+
+
+# ── Intro Video ───────────────────────────────────────────────────────────────
+
+class PieceIntroVideoTest(PieceBaseTestCase):
+
+    def test_create_piece_without_intro_video_is_allowed(self):
+        """intro_video es opcional: crear sin él debe funcionar."""
+        self.as_admin()
+        payload = piece_payload(self.type_piece, self.section, title='Sin Video')
+        response = self.client.post(LIST_URL, payload, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # El campo puede estar ausente o ser null/vacío en la respuesta
+        intro_video = response.data.get('intro_video')
+        self.assertFalse(bool(intro_video))
+
+    def test_create_piece_with_intro_video_is_saved(self):
+        """Admin puede crear una pieza adjuntando un intro_video."""
+        self.as_admin()
+        payload = piece_payload(
+            self.type_piece,
+            self.section,
+            title='Con Video',
+            intro_video=fake_video(),
+        )
+        response = self.client.post(LIST_URL, payload, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(bool(response.data.get('intro_video')))
+
+    def test_intro_video_is_persisted_in_db(self):
+        """El archivo de intro_video queda guardado en la base de datos."""
+        self.as_admin()
+        payload = piece_payload(
+            self.type_piece,
+            self.section,
+            title='Video en DB',
+            intro_video=fake_video(),
+        )
+        self.client.post(LIST_URL, payload, format='multipart')
+        piece = Piece.objects.get(slug='video-en-db')
+        self.assertTrue(bool(piece.intro_video))
+
+    def test_admin_can_add_intro_video_via_patch(self):
+        """Admin puede subir un intro_video a una pieza que no lo tenía."""
+        self.as_admin()
+        response = self.client.patch(
+            detail_url(self.piece.slug),
+            {'intro_video': fake_video()},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(bool(response.data.get('intro_video')))
+
+    def test_admin_can_remove_intro_video_via_patch(self):
+        """Admin puede eliminar el intro_video enviando un valor vacío."""
+        # Primero asignamos un video a la pieza existente directamente en DB
+        self.piece.intro_video = fake_video('existing.mp4')
+        self.piece.save()
+
+        self.as_admin()
+        response = self.client.patch(
+            detail_url(self.piece.slug),
+            {'intro_video': ''},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(bool(response.data.get('intro_video')))
+
+    def test_regular_user_cannot_upload_intro_video(self):
+        """Un usuario normal no puede modificar el intro_video."""
+        self.as_user()
+        response = self.client.patch(
+            detail_url(self.piece.slug),
+            {'intro_video': fake_video()},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthenticated_cannot_upload_intro_video(self):
+        """Un usuario anónimo no puede modificar el intro_video."""
+        self.as_anonymous()
+        response = self.client.patch(
+            detail_url(self.piece.slug),
+            {'intro_video': fake_video()},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_intro_video_field_present_in_retrieve_response(self):
+        """El campo intro_video debe estar presente en el detalle de la pieza."""
+        response = self.client.get(detail_url(self.piece.slug))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('intro_video', response.data)

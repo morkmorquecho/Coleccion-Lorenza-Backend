@@ -1,10 +1,6 @@
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 import logging
 
 logger = logging.getLogger(__name__)
@@ -47,19 +43,53 @@ class PasswordResetEmail:
     @staticmethod
     def send_email(to_email, **context):
         subject = "Restablecimiento de contraseña"
-        template_name = 'emails/password_reset.html'
+        template_name = 'emails/auth/password_reset.html'
         EmailService.send_template_email(subject, to_email, template_name, **context)
         
-class ConfirmUserEmail:
+class AccountConfirmationEmail:
     @staticmethod
     def send_email(to_email, **context):
         subject = "Confirmacion de cuenta"
-        template_name = 'emails/confirm_email.html'
+        template_name = 'emails/auth/account_confirmation.html'
         EmailService.send_template_email(subject, to_email, template_name, **context)  
 
-class UpdateUserEmail:
+class EmailUpdatedEmail:
     @staticmethod
     def send_email(to_email, **context):
         subject = "Confirmacion de cuenta"
-        template_name = 'emails/update_email.html'
-        EmailService.send_template_email(subject, to_email, template_name, **context)  
+        template_name = 'emails/auth/email_updated.html'
+        EmailService.send_template_email(subject, to_email, template_name, **context) 
+ 
+class OrderCreatedAdminEmail:
+    @staticmethod
+    def send_email(to_email, **context):
+        subject = "Nuevo Pedido"
+        template_name = 'emails/orders/order_created_admin.html'
+        EmailService.send_template_email(subject, to_email, template_name, **context) 
+
+class OrderCreatedUserEmail:
+    @staticmethod
+    def send_email(to_email, **context):
+        subject = "Pago Exitoso"
+        template_name = 'emails/orders/order_created_user.html'
+        EmailService.send_template_email(subject, to_email, template_name, **context) 
+class OrderShippedEmail:
+    @staticmethod
+    def send_email(to_email, **context):
+        subject = "Pedido Enviado"
+        template_name = 'emails/orders/order_shipped.html'
+        EmailService.send_template_email(subject, to_email, template_name, **context) 
+
+class OrderCancelledUserEmail:
+    @staticmethod
+    def send_email(to_email, **context):
+        subject = "Pedido Cancelado con exito"
+        template_name = 'emails/orders/order_cancelled_user.html'
+        EmailService.send_template_email(subject, to_email, template_name, **context) 
+
+class OrderCancelledAdminEmail:
+    @staticmethod
+    def send_email(to_email, **context):
+        subject = "Pedido Cancelado"
+        template_name = 'emails/orders/order_cancelled_admin.html'
+        EmailService.send_template_email(subject, to_email, template_name, **context) 

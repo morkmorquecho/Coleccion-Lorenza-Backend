@@ -27,10 +27,10 @@ logging.getLogger('s3transfer').setLevel(logging.WARNING)
 logging.getLogger('boto3').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
-
 DEBUG = config('DEBUG')
 #========================================== APPS INSTALADAS ==========================================
 INSTALLED_APPS = [
+    'modeltranslation',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -62,10 +62,9 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'blog.apps.BlogConfig',
     'orders.apps.OrdersConfig',
-    'reviews.apps.ReviewsConfig',
     'pieces.apps.PiecesConfig',
     'core',
-    
+    'cms.apps.CmsConfig',    
 ]
 
 
@@ -103,6 +102,7 @@ if 'test' in sys.argv:
         'NAME': ':memory:',
     }
 
+AUTH_USER_MODEL = 'users.User'
 
 #================================================= PASSWORD VALIDATORS =================================================
 AUTH_PASSWORD_VALIDATORS = [
@@ -145,6 +145,7 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 
      'TOKEN_OBTAIN_SERIALIZER': 'rest_framework_simplejwt.serializers.TokenObtainPairSerializer',
+
     'TOKEN_REFRESH_SERIALIZER': 'rest_framework_simplejwt.serializers.TokenRefreshSerializer',
 }
 
@@ -160,20 +161,15 @@ REST_AUTH = {
 }
 
 
-# =============================================== ALL AUTH  ========================================
-ACCOUNT_LOGIN_METHODS = ["email"]
 
-ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*', 'password2*']
+# =============================================== ALL AUTH  ========================================
+ACCOUNT_LOGIN_METHODS = {'email'}
+
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'confirm_password*']
 
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_PREVENT_ENUMERATION = True
-
-ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = '/login/'
-ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
-
 SOCIALACCOUNT_AUTO_SIGNUP = True
-
+SOCIALACCOUNT_ADAPTER = 'config.adapters.CustomSocialAccountAdapter'
 
 #=============================================== SOCIALACCOUNT_PROVIDERS DE ALLAUTH ===============================================
 SOCIALACCOUNT_PROVIDERS = {
@@ -186,12 +182,18 @@ SOCIALACCOUNT_PROVIDERS = {
             'access_type': 'online',
         },
         'APP': {
-            'client_id': config('ID_GOOGLE_CLIENT'),
+            'client_id': config('ID_GOOGLE_CLIENT_WEB'),
             'secret': config('SECRET_GOOGLE_CLIENT'),
             'key': ''
         }
     },
+
 }
+GOOGLE_CLIENT_IDS = [
+    config('ID_GOOGLE_CLIENT_WEB'),
+]
+GOOGLE_OAUTH2_CLIENT_ID = config('ID_GOOGLE_CLIENT_WEB')
+GOOGLE_OAUTH2_ALLOWED_CLIENT_IDS = GOOGLE_CLIENT_IDS
 
 
 #================================================ AUTH BACKEND =====================================================
@@ -212,10 +214,11 @@ if config('ACTIVE_RATES', default=False, cast=bool):
             'anon': '35/hour',
             'user': '500/hour',
             'login': '5/hour',
-            'register': '3/hour',
+            'register': '30/hour',
             'sensitive': '5/hour',
             'heavy': '20/hour',
-            'burst': '30/min',
+            'burst': '20/min',
+            'register_valid':'3/hour'
     }
 else:
     DEFAULT_THROTTLE_CLASSES = (
@@ -231,6 +234,7 @@ else:
             'sensitive': '995/hour',
             'heavy': '9920/hour',
             'burst': '9930/min',
+            'register_valid':'9993/hour'
     }
 
 
@@ -265,7 +269,10 @@ REST_FRAMEWORK = {
 
 
 #================================================ EMAIL CONFIG ==========================================================
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+if 'test' in sys.argv:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'  
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
@@ -277,6 +284,12 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
     default="http://localhost:3000,http://localhost:5173",  # React/Vite por defecto
+    cast=lambda v: [s.strip() for s in v.split(",") if s]
+)
+
+CSRF_TRUSTED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:3000,http://localhost:5173",
     cast=lambda v: [s.strip() for s in v.split(",") if s]
 )
 
@@ -299,31 +312,71 @@ CORS_ALLOW_HEADERS = [
 #========================================== CARPETAS RELEVANTES ==========================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# USANDO LOCAL
-# MEDIA_URL = '/media/'
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-# USANDO R2
-MEDIA_URL = f"https://{config('R2_PUBLIC_URL').replace('https://', '')}/"
-
-STATIC_URL = 'static/'
+# ─── ESTÁTICOS (siempre igual) ────────────────────────────────────
+STATIC_URL  = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
 
 
+# ========================================== STORAGE ==========================================
+USE_R2 = config('USE_R2', default=False, cast=bool)
+
+if USE_R2:
+    # ==== Cloudflare R2 ====
+    AWS_ACCESS_KEY_ID = config('R2_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = config('R2_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = config('R2_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = f"https://{config('CLOUDFLARE_ACCOUNT_ID')}.r2.cloudflarestorage.com"
+    AWS_S3_REGION_NAME = 'auto'
+    AWS_S3_CUSTOM_DOMAIN = config('R2_PUBLIC_URL').replace('https://', '')
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',
+    }
+
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",  
+        },
+    }
+
+else:
+    # ==== Local ====
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",  
+        },
+    }
+
+
+
 #================================================= MIDDLEWARE ====================================================
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',  
+    'core.middleware.CountryDetectionMiddleware',
 ]
 
 
@@ -385,7 +438,7 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             "class": "rich.logging.RichHandler",
             'formatter': 'rich',
             'rich_tracebacks': True,   
@@ -399,7 +452,7 @@ LOGGING = {
             'maxBytes': 1024 * 1024 * 15,  # 15MB
             'backupCount': 10,
             'formatter': 'verbose',
-            'filters': ['require_debug_false']
+            #'filters': ['require_debug_false']
         },
         'error_file': {
             'level': 'ERROR',
@@ -408,7 +461,7 @@ LOGGING = {
             'maxBytes': 1024 * 1024 * 15,
             'backupCount': 10,
             'formatter': 'verbose',
-            'filters': ['require_debug_false']
+            #'filters': ['require_debug_false']
         },
     },
     'loggers': {
@@ -418,7 +471,7 @@ LOGGING = {
             'propagate': False,
         },
         'django.request': {
-            'handlers': ['error_file'],
+            'handlers': ['console', 'error_file'],
             'level': 'ERROR',
             'propagate': False,
         },
@@ -432,23 +485,44 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'orders': {  
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        
     },
 }
 
 
 #================================================ CACHE ======================================================
+REDIS_URL = config('REDIS_URL')
+
 if config('CACHES_REDIS', default=False, cast=bool) == True:
-    CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': f'redis://{os.getenv("REDIS_HOST", "localhost")}:{os.getenv("REDIS_PORT", "6379")}/1',
-        'OPTIONS': {
-            'socket_connect_timeout': 5,
-            'socket_timeout': 5,
+    if config('DEBUG', default=False, cast=bool) == True:
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                'LOCATION': f'redis://{os.getenv("REDIS_HOST", "localhost")}:{os.getenv("REDIS_PORT", "6379")}/1',
+                'OPTIONS': {
+                    'socket_connect_timeout': 5,
+                    'socket_timeout': 5,
+                }
+            }
         }
-    }
-}
+    else:
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                'LOCATION': REDIS_URL,
+                'OPTIONS': {
+                    'socket_connect_timeout': 5,
+                    'socket_timeout': 5,
+                }
+            }
+        }
 else:
+  
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -490,38 +564,11 @@ if not config('DEBUG', default=True, cast=bool):
 
 
 #-------------------------------------- IDIOMA - ZONA HORARIA  --------------------------------------------
-LANGUAGE_CODE = 'es-es'
+LANGUAGE_CODE = 'es'
 TIME_ZONE = 'America/Mexico_City'
 USE_I18N = True
 USE_TZ = True
 
-
-##================================================  STORAGES ================================================
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
-
-AWS_ACCESS_KEY_ID = config('R2_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = config('R2_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = config('R2_BUCKET_NAME')
-AWS_S3_ENDPOINT_URL = f"https://{config('CLOUDFLARE_ACCOUNT_ID')}.r2.cloudflarestorage.com"
-AWS_S3_REGION_NAME = 'auto'
-
-# URL base desde donde se servirán los archivos públicamente
-AWS_S3_CUSTOM_DOMAIN = config('R2_PUBLIC_URL').replace('https://', '')
-
-# No firmar las URLs (el bucket es público)
-AWS_QUERYSTRING_AUTH = False
-
-# Opcional pero recomendado: caché para los archivos
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=86400',  # 1 día
-}
 
 #================================================ STRIPE ======================================================
 
@@ -529,13 +576,29 @@ STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY')  
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET') 
 
+#================================================ GEOIP ======================================================
+
+GEOIP_DB_PATH = os.path.join(BASE_DIR, 'data', 'geoip', 'GeoLite2-Country.mmdb')
+
+#================================================ PARLER LENGUAGE ============================================
+LANGUAGES = [
+    ('es', 'Español'),
+    ('en', 'English'),
+]
+
+
+
 #================================================ EXTRAS ======================================================
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', cast=bool)
 WSGI_APPLICATION = 'config.wsgi.application'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
 
 ROOT_URLCONF = 'config.urls'
 

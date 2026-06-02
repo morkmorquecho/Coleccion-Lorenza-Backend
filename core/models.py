@@ -1,6 +1,4 @@
 from django.db import models
-
-from django.db import models
 from django.utils import timezone
 
 
@@ -56,10 +54,10 @@ class BaseModel(models.Model):
     Modelo base abstracto para todos los modelos del proyecto.
     Incluye campos de auditoría y soft delete.
     """
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    is_active = models.BooleanField(default=True, db_index=True)
     
     
     objects = SoftDeleteManager()
@@ -68,6 +66,12 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
         ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=["is_active", "deleted_at"],
+                name="%(app_label)s_%(class)s_active_deleted_idx"
+            ),
+        ]
     
     def delete(self, using=None, keep_parents=False, hard=False):
         """
@@ -110,5 +114,18 @@ class BaseModel(models.Model):
         """Verifica si el registro está eliminado"""
         return self.deleted_at is not None
     
+    def get_owner_id(self):
+        """
+        Retorna el ID del usuario propietario del objeto.
+        Por defecto busca el campo 'user_id' directamente en el modelo.
+        Sobrescribir en modelos donde el owner esté en una relación anidada.
+        """
+        if hasattr(self, 'user_id'):
+            return self.user_id
+        raise NotImplementedError(
+            f"{self.__class__.__name__} debe implementar `get_owner_id()` "
+            f"o tener un campo `user` directo."
+        )
+
     def __str__(self):
         return f"{self.__class__.__name__} - {self.pk}"

@@ -1,5 +1,7 @@
 from django.test import TestCase
 
+# Create your tests here.
+# auth/tests/test_jwt_views.py
 from django.test import TestCase
 from rest_framework.exceptions import ValidationError  # ← Importar de DRF
 from rest_framework.test import APIClient
@@ -175,7 +177,9 @@ class PasswordResetConfirmViewTests(TestCase):
     
 # auth/tests.py
 from django.test import TestCase
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 from rest_framework.test import APIClient
 from rest_framework import status
 from unittest.mock import patch, MagicMock
@@ -196,7 +200,7 @@ class RegistrationAPIViewTests(TestCase):
             'password2': 'SecurePass123!'
         }
     
-    @patch('core.services.email_service.ConfirmUserEmail.send_email')
+    @patch('core.services.email_service.AccountConfirmationEmail.send_email')
     @patch('auth.views.user_views.UsersRegisterService.get_confirmation_url')
     def test_registro_exitoso(self, mock_get_url, mock_send_email):
         """Registro exitoso crea usuario inactivo y envía email"""
@@ -266,7 +270,7 @@ class RegistrationAPIViewTests(TestCase):
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
     
-    @patch('core.services.email_service.ConfirmUserEmail.send_email')
+    @patch('core.services.email_service.AccountConfirmationEmail.send_email')
     @patch('auth.views.user_views.UsersRegisterService.get_confirmation_url')
     def test_registro_fallo_email_no_impide_creacion(self, mock_get_url, mock_send_email):
         """Si falla el envío de email, el usuario se crea igual"""
@@ -301,7 +305,7 @@ class ResendTokenAPIViewTests(TestCase):
             is_active=True
         )
     
-    @patch('core.services.email_service.ConfirmUserEmail.send_email')
+    @patch('core.services.email_service.AccountConfirmationEmail.send_email')
     @patch('auth.views.user_views.UsersRegisterService.get_confirmation_url')
     def test_reenvio_exitoso(self, mock_get_url, mock_send_email):
         """Reenvío a usuario inactivo funciona correctamente"""
@@ -473,7 +477,7 @@ class RegistrationIntegrationTests(TestCase):
         self.confirm_url = '/api/v1/auth/verify/'
         self.resend_url = '/api/v1/auth/resend-token/'
     
-    @patch('core.services.email_service.ConfirmUserEmail.send_email')
+    @patch('core.services.email_service.AccountConfirmationEmail.send_email')
     @patch('auth.views.user_views.UsersRegisterService.get_confirmation_url')
     @patch('auth.views.user_views.UsersRegisterService.verify_email_token')
     def test_flujo_completo_registro_confirmacion(
@@ -508,7 +512,7 @@ class RegistrationIntegrationTests(TestCase):
         user.refresh_from_db()
         self.assertTrue(user.is_active)
     
-    @patch('core.services.email_service.ConfirmUserEmail.send_email')
+    @patch('core.services.email_service.AccountConfirmationEmail.send_email')
     @patch('auth.views.user_views.UsersRegisterService.get_confirmation_url')
     def test_flujo_registro_reenvio_token(self, mock_get_url, mock_send_email):
         """Flujo: registro → reenviar token → confirmación"""

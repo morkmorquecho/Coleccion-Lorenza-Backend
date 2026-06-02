@@ -3,17 +3,20 @@ from rest_framework.response import Response
 from rest_framework import viewsets
 from django.utils.text import slugify
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
+from django_filters.rest_framework import DjangoFilterBackend
 
 from core.mixins import ViewSetSentryMixin
-from pieces.docs.schemas import PIECE_DISCOUNT_VIEWSET, PIECE_PHOTO_VIEWSET, PIECE_VIEWSET, SECTION_VIEWSET, TYPE_PIECE_VIEWSET
-from .models import PieceDiscount, PiecePhoto, TypePiece, Section
-from core.permission import IsAdminOrReadOnly
-from pieces.filters import PieceFilter
+from pieces.docs.schemas import PIECE_DISCOUNT_VIEWSET, PIECE_PHOTO_VIEWSET, PIECE_VIEWSET, REVIEW_VIEWSET, SECTION_VIEWSET, TYPE_PIECE_VIEWSET
+from pieces.service import CurrencyService
+from .models import PieceDiscount, PiecePhoto, Review, TypePiece, Section
+from core.permission import IsAdminOrAuthenticatedCreate, IsAdminOrReadOnly
+from pieces.filters import PieceFilter, ReviewFilter
 from pieces.models import Piece
-from pieces.serializer import PieceDiscountSerializer, PiecePhotoBulkCreateSerializer, PiecePhotoBulkDeleteSerializer, PiecePhotoReorderSerializer, PiecePhotoSerializer, PieceSerializer, TypePieceSerializer, SectionSerializer
+from pieces.serializer import ExternalReviewSerializer, PieceDiscountSerializer, PiecePhotoBulkCreateSerializer, PiecePhotoBulkDeleteSerializer, PiecePhotoReorderSerializer, PiecePhotoSerializer, PiecePublicSerializer, PieceSerializer, ReviewSerializer, TypePieceSerializer, SectionSerializer
 from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 
 @PIECE_VIEWSET
 class PieceViewSet(ViewSetSentryMixin, ModelViewSet):
@@ -30,6 +33,24 @@ class PieceViewSet(ViewSetSentryMixin, ModelViewSet):
         serializer.save(slug=slugify(serializer.validated_data.get(
             'title', serializer.instance.title
         )))
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        currency = self.request.query_params.get('currency', 'MXN').upper()
+        context['currency'] = currency
+        if currency == 'USD':
+            context['usd_rate'] = CurrencyService.get_usd_rate()
+        return context
+
+    @action(detail=False, methods=['get'], url_path='basic')
+    def public_pieces(self, request):
+        pieces = Piece.objects.only(
+            'thumbnail_path',
+            'title'
+        )
+
+        serializer = PiecePublicSerializer(pieces, many=True)
+        return Response(serializer.data)
 
 @PIECE_PHOTO_VIEWSET
 class PiecePhotoViewSet(ViewSetSentryMixin, ModelViewSet):
@@ -197,3 +218,32 @@ class SectionViewSet(ViewSetSentryMixin, ReadOnlyModelViewSet):
     serializer_class = SectionSerializer
     lookup_field = "key"
     permission_classes = [IsAdminOrReadOnly]
+
+@REVIEW_VIEWSET
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.select_related('user', 'piece').all()
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAdminOrAuthenticatedCreate]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ReviewFilter
+
+    def get_serializer_class(self):
+        # Serializer diferente según tipo de reseña
+        review_type = self.request.data.get('review_type', 'internal')
+        if review_type == Review.ReviewType.EXTERNAL:
+            return ExternalReviewSerializer  # Solo admins lo usan
+        return ReviewSerializer
+
+    def perform_create(self, serializer):
+        review_type = self.request.data.get('review_type', 'internal')
+
+        if review_type == Review.ReviewType.EXTERNAL:
+            # Solo admins pueden crear reseñas externas
+            if not self.request.user.is_staff:
+                raise PermissionDenied("Solo administradores pueden subir reseñas externas.")
+            serializer.save(review_type=Review.ReviewType.EXTERNAL)
+        else:
+            serializer.save(
+                user=self.request.user,
+                review_type=Review.ReviewType.INTERNAL
+            )

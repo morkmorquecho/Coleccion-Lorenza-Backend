@@ -2,7 +2,7 @@
 Servicios de lógica de negocio para autenticación.
 TODA la lógica de negocio va aquí, NO en las vistas.
 """
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -12,8 +12,11 @@ from rest_framework.exceptions import ValidationError
 import logging
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from itsdangerous import URLSafeTimedSerializer
+from decouple import config
+from core.responses.messages import AuthMessages
+from core.services.email_service import AccountConfirmationEmail, PasswordResetEmail
 
-from core.services.email_service import PasswordResetEmail
+FRONTEND_URL = config('FRONTEND_URL')
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -103,10 +106,9 @@ class PasswordResetService:
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = PasswordResetTokenGenerator().make_token(user)
             
-            reset_path = f"/auth/reset-password/{uid}/{token}/"
-            reset_url = request.build_absolute_uri(reset_path)
+            reset_path = f"{FRONTEND_URL}/auth/reset/password/confirm/{uid}/{token}/"
             
-            PasswordResetEmail.send_email(user.email, reset_url = reset_url, nombre = user.username)
+            PasswordResetEmail.send_email(user.email, reset_url = reset_path, nombre = user.username)
             
             logger.info(f"Restablecimiento de contraseña enviado a: {email}")
             
@@ -153,7 +155,84 @@ class UsersRegisterService:
             return None
 
     @staticmethod
-    def get_confirmation_url(user, request, new_email=None):
+    def get_confirmation_url(user, new_email=None):
         token = UsersRegisterService.generate_email_token(user, new_email)
-        verify_url = f"/users/verify-email?token={token}"
-        return request.build_absolute_uri(verify_url)
+        return f"{FRONTEND_URL}/auth/email/verify?token={token}"
+
+
+class ChangePasswordService:
+
+    @staticmethod
+    def change_password(user, current_password: str, new_password: str) -> None:
+        """
+        Valida la contraseña actual y establece la nueva.
+        Lanza ValidationError si la contraseña actual es incorrecta.
+        """
+        authenticated = authenticate(
+            username=user.get_username(),
+            password=current_password
+        )
+        if authenticated is None:
+            raise ValidationError(
+                {"current_password": "La contraseña actual es incorrecta."}
+            )
+
+        user.set_password(new_password)
+        user.save(update_fields=['password'])
+
+
+
+class LoginService:
+
+    @staticmethod
+    def get_user_by_credential(*, username=None, email=None):
+        """Busca el user por email o username. Retorna None si no existe."""
+        try:
+            if email:
+                return User.objects.get(email=email)
+            if username:
+                return User.objects.get(username=username)
+        except User.DoesNotExist:
+            return None
+
+    @staticmethod
+    def check_inactive_user(user, password, request_ip) -> dict | None:
+        """
+        Si el user está inactivo y la contraseña es correcta,
+        retorna un dict con 'reason' y 'response'.
+        Retorna None si no aplica.
+        """
+        if user.is_active or not user.check_password(password):
+            return None
+
+        if user.last_login is None:
+            confirm_url = UsersRegisterService.get_confirmation_url(user)
+            AccountConfirmationEmail.send_email(
+                to_email=user.email,
+                confirm_url=confirm_url,
+                nombre=user.username,
+            )
+            return {
+                'reason': 'Cuenta INACTIVA (sin confirmar)',
+                'response': AuthMessages.ACCOUNT_CONFIRMATION_REQUIRED,
+            }
+
+        return {
+            'reason': 'Cuenta BANEADA',
+            'response': AuthMessages.CREDENTIALS_INVALID,
+        }
+
+    @staticmethod
+    def authenticate_user(request, *, user_obj=None, username=None, password):
+        """Intenta autenticar. Prueba primero por user_obj, luego por username."""
+        user = None
+        if user_obj:
+            user = authenticate(request=request, username=user_obj.username, password=password)
+        if not user and username:
+            user = authenticate(request=request, username=username, password=password)
+        return user
+    
+    @staticmethod
+    def check_provider_only_account(user) -> bool:
+        """True si el usuario no tiene contraseña utilizable (registrado via provider)."""
+        return user is not None and not user.has_usable_password()

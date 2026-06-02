@@ -3,14 +3,14 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes,authentication_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
-from django.contrib.auth.models import User
 from auth.docs.schemas import REGISTRATION, RESEND_TOKEN, VERIFY_EMAIL, VERIFY_USER
 from auth.serializers import ResendTokenSerializer, UserCreateSerializer, VerifyEmailSerializer
+from core.docs.schema_utils import auto_schema
 from core.mixins import SentryErrorHandlerMixin, ViewSetSentryMixin
-from config.throttling import RegisterThrottle, SensitiveOperationThrottle
+from config.throttling import RegisterThrottle, SensitiveOperationThrottle, RegisterValidThrottle
 from auth.docs.request import RESEND_CONFIRMATION_EMAIL_REQUEST
-from core.responses.messages import UserMessages
-from core.services.email_service import ConfirmUserEmail
+from core.responses.messages import AuthMessages, UserMessages
+from core.services.email_service import AccountConfirmationEmail
 from django.conf import settings
 from django.core.mail import send_mail
 from auth.services import UsersRegisterService
@@ -24,15 +24,13 @@ from rest_framework.mixins import (
 from django.contrib.auth import get_user_model
 from rest_framework.generics import CreateAPIView
 from rest_framework.views import APIView
+User = get_user_model()
 
-
-_MODULE_PATH = __name__
-
-@REGISTRATION
+@auto_schema(**REGISTRATION)
 class RegistrationAPIView(SentryErrorHandlerMixin,CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = UserCreateSerializer
-    throttle_classes =  [RegisterThrottle]
+    throttle_classes =  [RegisterThrottle, RegisterValidThrottle]
 
     
     def post(self, request, *args, **kwargs):
@@ -53,11 +51,12 @@ class RegistrationAPIView(SentryErrorHandlerMixin,CreateAPIView):
     def _post(self, request, *args, **kwargs):        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        request._is_valid = True
         user = serializer.save(is_active=False)  
 
-        confirm_url= UsersRegisterService.get_confirmation_url(user, request)                    
+        confirm_url= UsersRegisterService.get_confirmation_url(user)                    
 
-        ConfirmUserEmail.send_email(
+        AccountConfirmationEmail.send_email(
             to_email=user.email, 
             confirm_url=confirm_url, 
             nombre=user.username
@@ -71,10 +70,10 @@ class RegistrationAPIView(SentryErrorHandlerMixin,CreateAPIView):
             headers=headers
         )
     
-@RESEND_TOKEN
+@auto_schema(**RESEND_TOKEN)
 class ResendTokenAPIView(SentryErrorHandlerMixin, CreateAPIView):
     permission_classes = [AllowAny]
-    throttle_classes =  [SensitiveOperationThrottle]
+    throttle_classes =  [SensitiveOperationThrottle, RegisterValidThrottle]
     serializer_class = ResendTokenSerializer
     
     def post(self, request, *args, **kwargs):
@@ -87,7 +86,7 @@ class ResendTokenAPIView(SentryErrorHandlerMixin, CreateAPIView):
                 'component': 'ResendTokenAPIView._post',
             },
             success_message={
-                'detail': UserMessages.USER_CREATED
+                'detail': UserMessages.EMAIL_SENT_IF_EXISTS
             },
             success_status=status.HTTP_201_CREATED
         )
@@ -95,14 +94,14 @@ class ResendTokenAPIView(SentryErrorHandlerMixin, CreateAPIView):
     def _post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True) 
-        
+        request._is_valid = True        
         email = serializer.validated_data['email']
 
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             return Response(
-                {"message": UserMessages.USER_CREATED}, 
+                {"message": UserMessages.EMAIL_SENT_IF_EXISTS}, 
                 status=status.HTTP_200_OK
             )
         
@@ -112,9 +111,9 @@ class ResendTokenAPIView(SentryErrorHandlerMixin, CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        confirm_url= UsersRegisterService.get_confirmation_url(user, request)                    
+        confirm_url= UsersRegisterService.get_confirmation_url(user)                    
         
-        ConfirmUserEmail.send_email(
+        AccountConfirmationEmail.send_email(
             to_email=user.email, 
             confirm_url=confirm_url, 
             nombre=user.username
@@ -127,7 +126,7 @@ class ResendTokenAPIView(SentryErrorHandlerMixin, CreateAPIView):
             status=status.HTTP_200_OK
         )
 
-@VERIFY_EMAIL
+@auto_schema(**VERIFY_EMAIL)
 class VerifyEmailAPIView(SentryErrorHandlerMixin, APIView):
     permission_classes = [AllowAny]
     throttle_classes = [SensitiveOperationThrottle]
@@ -143,7 +142,7 @@ class VerifyEmailAPIView(SentryErrorHandlerMixin, APIView):
 
         if not data:
             return Response(
-                {"error": UserMessages.TOKEN_INVALID},
+                {"error": AuthMessages.TOKEN_INVALID_OR_EXPIRED},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -181,7 +180,7 @@ class VerifyEmailAPIView(SentryErrorHandlerMixin, APIView):
         # CASO 2: Cambio de email
         if User.objects.filter(email=new_email).exclude(id=user_id).exists():
             return Response(
-                {"error": UserMessages.EMAIL_NOT_AVAIBLE},
+                {"error": UserMessages.EMAIL_ALREADY_IN_USE},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -193,6 +192,14 @@ class VerifyEmailAPIView(SentryErrorHandlerMixin, APIView):
         )
 
         return Response(
-            {"message": UserMessages.NEW_EMAIL},
+            {"message": UserMessages.EMAIL_UPDATED,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'is_staff': user.is_staff
+            }},
             status=status.HTTP_200_OK
         )

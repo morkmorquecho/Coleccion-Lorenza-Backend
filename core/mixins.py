@@ -15,6 +15,9 @@ from django.utils.html import format_html
 from core.responses.messages import ErrorMessages
 from django.db import transaction
 
+from django.core.cache import cache
+from rest_framework.response import Response
+from rest_framework import status
 
 class SentryErrorHandlerMixin:
     """
@@ -182,7 +185,10 @@ class SentryErrorHandlerMixin:
             )
         
         # Re-lanzar para que DRF lo maneje
-        raise
+        return Response(
+            {'detail': exception.detail},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     
     def _handle_django_validation_error(self, exception, tags, extra):
         """Manejo de ValidationError de Django"""
@@ -474,41 +480,42 @@ class SoftDeleteAdminMixin:
         self.message_user(request, f"{queryset.count()} registro(s) desactivados.")
     action_deactivate.short_description = "Desactivar registros seleccionados"
 
-class ImagenPKMixin:
-    """
-    Mixin para modelos que tienen ImageFields y necesitan
-    que el archivo se nombre usando el PK del objeto.
+class OwnerCheckMixin:
+    """Mixin que agrega método para verificar ownership"""
     
-    Uso:
-        class pieces(ImagenPKMixin, models.Model):
-            imagen = models.ImageField(...)
+    def is_own_profile(self):
+        """Verifica si está viendo su propio perfil"""
+        if not self.request.user.is_authenticated:
+            return False
         
-        # Si tienes varios ImageFields:
-        class pieces(ImagenPKMixin, models.Model):
-            imagen_principal = models.ImageField(...)
-            imagen_secundaria = models.ImageField(...)
-    """
+        try:
+            return int(self.kwargs.get('pk')) == self.request.user.id
+        except (ValueError, TypeError, AttributeError):
+            return False
 
-    def _get_image_fields(self):
-        """Detecta automáticamente todos los ImageFields del modelo."""
-        from django.db.models import ImageField
-        return [
-            f.attname for f in self._meta.get_fields()
-            if isinstance(f, ImageField)
-        ]
+from decimal import Decimal
+from pieces.service import CurrencyService
 
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            imagenes_temporales = {}
-            for field_name in self._get_image_fields():
-                imagenes_temporales[field_name] = getattr(self, field_name)
-                setattr(self, field_name, None)
+class CurrencyMixin:
+    def _get_rate(self) -> Decimal:
+        if 'usd_rate' not in self.context:
+            self.context['usd_rate'] = CurrencyService.get_usd_rate()
+        return self.context['usd_rate']
 
-            with transaction.atomic():
-                super().save(*args, **kwargs)
-                for field_name, valor in imagenes_temporales.items():
-                    setattr(self, field_name, valor)
-                kwargs.pop('force_insert', None)
-                super().save(*args, **kwargs)
-        else:
-            super().save(*args, **kwargs)
+    def _to_currencies(self, amount: Decimal) -> dict:
+        rate = self._get_rate()
+        return {
+            'MXN': amount,
+            'USD': round(amount / rate, 2),
+        }
+    
+
+class TranslatedFieldsMixin:
+    def _get_lang(self):
+        request = self.context.get('request')
+        raw = request.headers.get('Accept-Language', 'es') if request else 'es'
+        return raw if raw in {'es', 'en'} else 'es'
+
+    def get_translated(self, obj, field):
+        lang = self._get_lang()
+        return getattr(obj, f'{field}_{lang}', getattr(obj, f'{field}_es'))

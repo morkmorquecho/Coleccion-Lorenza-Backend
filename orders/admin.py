@@ -7,6 +7,7 @@ from django.utils.html import format_html
 from core.mixins import SoftDeleteAdminMixin
 from .models import (
     Coupon,
+    ExchangeRate,
     Order,
     OrderItem,
     ShippingTracking,
@@ -49,6 +50,8 @@ class ShippingTrackingInline(SoftDeleteAdminMixin, admin.TabularInline):
 @admin.register(Coupon)
 class CouponAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
+        "id",
+        "is_active",
         "code",
         "percentage",
         "valid_from",
@@ -64,6 +67,7 @@ class CouponAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 class OrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
+        "is_active",
         "user",
         "total",
         "status",
@@ -80,6 +84,7 @@ class OrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 class OrderItemAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
+        "is_active",
         "order",
         "piece",
         "quantity",
@@ -93,6 +98,8 @@ class OrderItemAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 @admin.register(ShippingTracking)
 class ShippingTrackingAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
+        "id",
+        "is_active",
         "order",
         "carrier",
         "tracking_number",
@@ -118,6 +125,8 @@ class ShippingTrackingAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 @admin.register(Payment)
 class PaymentAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
+        "id",
+        "is_active",
         "order",
         "amount",
         "payment_method",
@@ -132,6 +141,8 @@ class PaymentAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 @admin.register(CouponUsage)
 class CouponUsageAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = (
+        "id",
+        "is_active",
         "order",
         "coupon",
         "user",
@@ -140,3 +151,20 @@ class CouponUsageAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     )
     list_filter = ("coupon", "created_at")
     search_fields = ("order__id", "coupon__code", "user__username")
+
+@admin.register(ExchangeRate)
+class ExchangeRateAdmin(admin.ModelAdmin):
+    list_display = ("id","usd_to_mxn", "fetched_at", "source")
+    list_filter = ("source", "fetched_at")
+    search_fields = ("source",)
+    ordering = ("-fetched_at",)
+    readonly_fields = ("fetched_at",)
+
+    fieldsets = (
+        ("Tipo de cambio", {
+            "fields": ("usd_to_mxn",)
+        }),
+        ("Metadata", {
+            "fields": ("fetched_at", "source")
+        }),
+    )

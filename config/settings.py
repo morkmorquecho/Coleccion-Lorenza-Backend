@@ -27,7 +27,6 @@ logging.getLogger('s3transfer').setLevel(logging.WARNING)
 logging.getLogger('boto3').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
-
 DEBUG = config('DEBUG')
 #========================================== APPS INSTALADAS ==========================================
 INSTALLED_APPS = [
@@ -497,6 +496,8 @@ LOGGING = {
 
 
 #================================================ CACHE ======================================================
+REDIS_URL = config('REDIS_URL')
+
 if config('CACHES_REDIS', default=False, cast=bool) == True:
     if config('DEBUG', default=False, cast=bool) == True:
         CACHES = {
@@ -513,7 +514,7 @@ if config('CACHES_REDIS', default=False, cast=bool) == True:
         CACHES = {
             'default': {
                 'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-                'LOCATION': os.getenv('REDIS_URL'),
+                'LOCATION': REDIS_URL,
                 'OPTIONS': {
                     'socket_connect_timeout': 5,
                     'socket_timeout': 5,

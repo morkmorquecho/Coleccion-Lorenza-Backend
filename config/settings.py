@@ -498,17 +498,30 @@ LOGGING = {
 
 #================================================ CACHE ======================================================
 if config('CACHES_REDIS', default=False, cast=bool) == True:
-    CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': f'redis://{os.getenv("REDIS_HOST", "localhost")}:{os.getenv("REDIS_PORT", "6379")}/1',
-        'OPTIONS': {
-            'socket_connect_timeout': 5,
-            'socket_timeout': 5,
+    if config('DEBUG', default=False, cast=bool) == True:
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                'LOCATION': f'redis://{os.getenv("REDIS_HOST", "localhost")}:{os.getenv("REDIS_PORT", "6379")}/1',
+                'OPTIONS': {
+                    'socket_connect_timeout': 5,
+                    'socket_timeout': 5,
+                }
+            }
         }
-    }
-}
+    else:
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                'LOCATION': os.getenv('REDIS_PRIVATE_URL'),
+                'OPTIONS': {
+                    'socket_connect_timeout': 5,
+                    'socket_timeout': 5,
+                }
+            }
+        }
 else:
+  
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',

@@ -34,20 +34,20 @@
         },
         "boto3": {
             "hashes": [
-                "sha256:7b3e0c4bfd8815a3df64fbe98fc9f87dfb12bd7a783cf63dfc2f166c66798c9d",
-                "sha256:ff4a4afb832f63a1358e11fe6eb321da0f4767979c6721dd32fb02e6eabcebf5"
+                "sha256:aa900216bdc48bbd0115ed7128a4baed5548c6a60673160a38df8a8566df57cd",
+                "sha256:d4123ceb3be36c5cb7ddccc7a7c43701e1fb6af612ef46e3b5d667daf5447d4b"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.9'",
-            "version": "==1.42.52"
+            "version": "==1.42.67"
         },
         "botocore": {
             "hashes": [
-                "sha256:3bdef10aee4cee13ff019b6a1423a2ce3ca17352328d9918157a1829e5cc9be1",
-                "sha256:c3a0b7138a4c5a534da0eb2444c19763b4d03ba2190c0602c49315e54efd7252"
+                "sha256:a94317d2ce83deae230964beb2729639455de65595d0154f285b0ccfd29780cd",
+                "sha256:ee307f30fcb798d244fb35a87847b274e1e1f72cd5f7f2e31bd1826df0c45295"
             ],
             "markers": "python_version >= '3.9'",
-            "version": "==1.42.52"
+            "version": "==1.42.67"
         },
         "certifi": {
             "hashes": [
@@ -332,12 +332,12 @@
         },
         "django": {
             "hashes": [
-                "sha256:7f2d292ad8b9ee35e405d965fbbad293758b858c34bbf7f3df551aeeac6f02d3",
-                "sha256:e7130df33ada9ab5e5e929bc19346a20fe383f5454acb2cc004508f242ee92c0"
+                "sha256:4853482f395c3a151937f6991272540fcbf531464f254a347bf7c89f53c8cff7",
+                "sha256:6b809af7165c73eff5ce1c87fdae75d4da6520d6667f86401ecf55b681eb1eeb"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.10'",
-            "version": "==5.2.11"
+            "version": "==5.2.12"
         },
         "django-allauth": {
             "hashes": [

@@ -28,7 +28,7 @@ class CurrencyService:
         # 1. Intentar desde cache (evita llamada a Banxico y a la BD)
         cached_rate = cache.get(EXCHANGE_RATE_CACHE_KEY)
         if cached_rate is not None:
-            return cached_rate
+            return Decimal(cached_rate)
 
         # 2. Cache miss: buscar en Banxico y persistir
         try:
@@ -40,7 +40,7 @@ class CurrencyService:
                     'fetched_at': timezone.now()
                 }
             )
-            cache.set(EXCHANGE_RATE_CACHE_KEY, rate, EXCHANGE_RATE_CACHE_TTL)
+            cache.set(EXCHANGE_RATE_CACHE_KEY, str(rate), EXCHANGE_RATE_CACHE_TTL)
             return rate
 
         # 3. Fallback: Banxico falló, usar el último rate guardado en BD

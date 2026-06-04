@@ -231,3 +231,55 @@ class ExchangeRateView(APIView):
         rate = CurrencyService.get_usd_rate()
         return Response({'usd_to_mxn': rate})
     
+
+# views.py (temporal, solo para debug)
+from django.core.cache import cache
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+import time
+
+class CacheDebugView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        # 1. ¿Qué backend está usando Django?
+        cache_backend = settings.CACHES.get('default', {})
+        
+        # 2. Prueba de escritura/lectura en Redis
+        test_key = 'cache_debug_test'
+        test_value = 'ok_from_redis'
+        
+        write_ok = False
+        read_ok = False
+        latency_ms = None
+
+        try:
+            cache.set(test_key, test_value, 30)
+            write_ok = True
+
+            t0 = time.monotonic()
+            result = cache.get(test_key)
+            latency_ms = round((time.monotonic() - t0) * 1000, 2)
+
+            read_ok = result == test_value
+        except Exception as e:
+            error = str(e)
+        else:
+            error = None
+
+        # 3. ¿El key del tipo de cambio ya existe?
+        from pieces.service import EXCHANGE_RATE_CACHE_KEY  
+        rate_cached = cache.get(EXCHANGE_RATE_CACHE_KEY)
+
+        return Response({
+            'backend': cache_backend.get('BACKEND', 'desconocido'),
+            'location': cache_backend.get('LOCATION', 'N/A'),  # URL de Redis
+            'write_ok': write_ok,
+            'read_ok': read_ok,
+            'latency_ms': latency_ms,
+            'error': error,
+            'exchange_rate_in_cache': rate_cached is not None,
+            'exchange_rate_value': str(rate_cached) if rate_cached else None,
+        })

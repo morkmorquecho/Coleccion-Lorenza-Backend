@@ -17,6 +17,7 @@ from pathlib import Path
 import sentry_sdk
 import logging
 import warnings
+DOMAIN = config('DOMAIN')
 
 #IGNORAR WARNINGS INNUTILES
 warnings.filterwarnings('ignore', module='dj_rest_auth.registration.serializers')
@@ -280,7 +281,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'resend'          
 EMAIL_HOST_PASSWORD = config('RESEND_API_KEY')
-DEFAULT_FROM_EMAIL = 'no-reply@colecccionlorenza.com'
+DEFAULT_FROM_EMAIL = f'no-reply@{DOMAIN}'
 EMAIL_TIMEOUT = 10
 
 # ================================================ CORS CONFIGURATION ================================================

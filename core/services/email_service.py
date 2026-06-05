@@ -2,7 +2,9 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 import logging
+from decouple import config
 
+DOMAIN = config('DOMAIN')
 logger = logging.getLogger(__name__)
 
 class EmailService:
@@ -28,7 +30,7 @@ class EmailService:
             result = send_mail(
                 subject,
                 plain_message,
-                'noreply@tuapp.com',
+                f'noreply@{DOMAIN}',
                 [to_email],
                 html_message=html_content
             )

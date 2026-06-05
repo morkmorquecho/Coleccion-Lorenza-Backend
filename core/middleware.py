@@ -22,9 +22,16 @@ class CountryDetectionMiddleware:
         return self.get_response(request)
 
     def get_client_ip(self, request) -> str:
+        # Cloudflare pone la IP real del cliente aquí
+        cf_ip = request.META.get('HTTP_CF_CONNECTING_IP')
+        if cf_ip:
+            return cf_ip.strip()
+
+        # Fallback para cuando no hay Cloudflare (dev local, etc.)
         forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
         if forwarded:
             return forwarded.split(',')[0].strip()
+
         return request.META.get('REMOTE_ADDR')
 
     def get_country(self, ip) -> str:

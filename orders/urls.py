@@ -1,5 +1,5 @@
 from django.urls import include, path
-from .views import CacheDebugView, CancelOrderView, CheckoutView, ExchangeRateView, StripeWebhookView,OrderViewSet, ShippingTrackingViewSet, ValidateCouponView
+from .views import CacheDebugView, CancelOrderView, CheckoutView, ExchangeRateView, IPDebugView, StripeWebhookView,OrderViewSet, ShippingTrackingViewSet, ValidateCouponView
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers
 
@@ -9,6 +9,7 @@ router.register(r'shipping-trackings', ShippingTrackingViewSet, basename='shippi
 
 orders_patterns = [
     # path('debug/cache/', CacheDebugView.as_view(), name='debug cache'),
+    path('debug/ip/', IPDebugView.as_view(), name='ip-debug'),
     path('orders/checkout/', CheckoutView.as_view(), name='checkout'),
     path('orders/webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),
     path('orders/<int:pk>/cancel/', CancelOrderView.as_view(), name='cancel-order'),

@@ -69,6 +69,9 @@ class Piece( BaseModel):
         verbose_name = 'Pieza'
         verbose_name_plural = 'Piezas'
     
+    def __str__(self):
+        return self.title
+    
     @property
     def volumetric_weight(self):
         return max((self.width * self.height * self.length) / 5000, 1)

@@ -11,4 +11,4 @@ class SectionTranslationOptions(TranslationOptions):
 
 @register(Piece)
 class PieceTranslationOptions(TranslationOptions):
-    fields = ('title','slug','description')
+    fields = ('title','description')

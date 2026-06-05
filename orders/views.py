@@ -282,5 +282,23 @@ class CacheDebugView(APIView):
             'error': error,
             'exchange_rate_in_cache': rate_cached is not None,
             'exchange_rate_value': str(rate_cached) if rate_cached else None,
+        })
+        
+        
+from django.http import JsonResponse
+from django.views import View
+class IPDebugView(View):
+    def get(self, request):
+        forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+        raw_ip   = request.META.get('REMOTE_ADDR')
+        resolved = forwarded.split(',')[0].strip() if forwarded else raw_ip
+
+        return JsonResponse({
+            'detected_country': getattr(request, 'detected_country', '–'),
+            'resolved_ip':      resolved,
+            'raw_remote_addr':  raw_ip,
+            'x_forwarded_for':  forwarded,
+            'x_force_country':  request.META.get('HTTP_X_FORCE_COUNTRY'),
             'cf_connecting_ip': request.META.get('HTTP_CF_CONNECTING_IP'),
         })
+

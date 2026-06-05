@@ -1,5 +1,5 @@
 from django.urls import include, path
-from .views import CacheDebugView, CancelOrderView, CheckoutView, ExchangeRateView, IPDebugView, StripeWebhookView,OrderViewSet, ShippingTrackingViewSet, ValidateCouponView
+from .views import CacheDebugView, IPDebugView,CancelOrderView, CheckoutView, ExchangeRateView, IPDebugView, StripeWebhookView,OrderViewSet, ShippingTrackingViewSet, ValidateCouponView
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers
 

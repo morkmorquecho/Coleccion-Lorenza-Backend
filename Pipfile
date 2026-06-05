@@ -32,6 +32,7 @@ requests = "*"
 django-modeltranslation = "*"
 gunicorn = "*"
 whitenoise = "*"
+resend = "*"
 
 [dev-packages]
 

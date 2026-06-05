@@ -45,7 +45,6 @@ class PieceSerializer(TranslatedFieldsMixin, CurrencyMixin, serializers.ModelSer
     final_price_base = serializers.SerializerMethodField()
     original_price_base = serializers.SerializerMethodField()  
     title = serializers.SerializerMethodField()
-    slug = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
     class Meta:
         model = Piece
@@ -79,9 +78,6 @@ class PieceSerializer(TranslatedFieldsMixin, CurrencyMixin, serializers.ModelSer
     
     def get_title(self, obj):
         return self.get_translated(obj, 'title')
-
-    def get_slug(self, obj):
-        return self.get_translated(obj, 'slug')
 
     def get_description(self, obj):
         return self.get_translated(obj, 'description')

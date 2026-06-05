@@ -15,14 +15,10 @@ class BlogSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
         required=False
     )
     title = serializers.SerializerMethodField()
-    slug = serializers.SerializerMethodField()
     content = serializers.SerializerMethodField()
 
     def get_title(self, obj):
         return self.get_translated(obj, 'title')
-
-    def get_slug(self, obj):
-        return self.get_translated(obj, 'slug')
 
     def get_content(self, obj):
         return self.get_translated(obj, 'content')
@@ -39,9 +35,6 @@ class BlogSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
 
     def get_title(self, obj):
         return getattr(obj, f'title_{self._get_lang()}', obj.title_es)
-
-    def get_slug(self, obj):
-        return getattr(obj, f'slug_{self._get_lang()}', obj.slug_es)
 
     def get_content(self, obj):
         return getattr(obj, f'content_{self._get_lang()}', obj.content_es)

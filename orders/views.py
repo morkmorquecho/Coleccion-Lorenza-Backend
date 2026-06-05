@@ -282,4 +282,5 @@ class CacheDebugView(APIView):
             'error': error,
             'exchange_rate_in_cache': rate_cached is not None,
             'exchange_rate_value': str(rate_cached) if rate_cached else None,
+            'cf_connecting_ip': request.META.get('HTTP_CF_CONNECTING_IP'),
         })

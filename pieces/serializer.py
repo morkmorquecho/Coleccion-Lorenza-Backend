@@ -29,15 +29,8 @@ class SectionSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
         return self.get_translated(obj, 'section')
 
 class PieceSerializer(TranslatedFieldsMixin, CurrencyMixin, serializers.ModelSerializer):
-    type = serializers.SlugRelatedField(slug_field='key', read_only=True)
-    section = serializers.SlugRelatedField(slug_field='key', read_only=True)
-
-    type_id = serializers.PrimaryKeyRelatedField(
-        queryset=TypePiece.objects.all(), source='type', write_only=True
-    )
-    section_id = serializers.PrimaryKeyRelatedField(
-        queryset=Section.objects.all(), source='section', write_only=True
-    )
+    type = serializers.SlugRelatedField(slug_field='type', read_only=True)
+    section = serializers.SlugRelatedField(slug_field='section', read_only=True)
 
     # Campos calculados
     has_discount = serializers.SerializerMethodField()
@@ -64,9 +57,7 @@ class PieceSerializer(TranslatedFieldsMixin, CurrencyMixin, serializers.ModelSer
             "customizable",
             "featured",
             "type",       
-            "type_id",    
             "section",    
-            "section_id", 
             "created_at",
             
             # calculados

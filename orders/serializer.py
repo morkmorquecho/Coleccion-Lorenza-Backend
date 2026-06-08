@@ -42,6 +42,9 @@ class CheckoutSerializer(serializers.Serializer):
         except Coupon.DoesNotExist:
             raise serializers.ValidationError("Cupón inválido o expirado.")
 
+        if not coupon.has_uses_remaining():
+            raise serializers.ValidationError("Este cupón ha alcanzado su límite de usos.")
+
         user = self.context['request'].user
         if CouponUsage.objects.filter(user=user, coupon=coupon).exists():
             raise serializers.ValidationError("Ya usaste este cupón anteriormente.")

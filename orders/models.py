@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+from decimal import Decimal
 User = get_user_model()
 from core.models import BaseModel
 from core.utils.validations import validate_date_range
@@ -13,21 +15,31 @@ TRACKING_URLS = {
 }
 class Coupon(BaseModel):
     code = models.CharField(max_length=100, unique=True)
-    percentage = models.DecimalField(max_digits=3, decimal_places=1)
-    valid_from = models.DateField(db_index=True)           
-    valid_until = models.DateField(db_index=True)  
-
-    class Meta:
-        verbose_name = ("Cupon")
-        verbose_name_plural = ("Cupones")    
+    percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    valid_from = models.DateField(db_index=True)
+    valid_until = models.DateField(db_index=True)
+    max_uses = models.PositiveIntegerField(null=True, blank=True)
 
     def clean(self):
         validate_date_range(self.valid_from, self.valid_until)
+        if not (Decimal('0') < self.percentage <= Decimal('100')):
+            raise ValidationError({'percentage': 'El porcentaje debe estar entre 0 y 100.'})
+
+    def is_valid(self):
+        today = timezone.now().date()
+        return self.valid_from <= today <= self.valid_until
+
+    def has_uses_remaining(self):
+        if self.max_uses is None:
+            return True
+        return self.usages.count() < self.max_uses
 
     def __str__(self):
         return f"{self.code} ({self.percentage}%)"
-    
+
     class Meta:
+        verbose_name = "Cupón"
+        verbose_name_plural = "Cupones"
         indexes = [
             models.Index(fields=["valid_from", "valid_until"], name="coupon_validity_idx"),
         ]

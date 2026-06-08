@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
                 ('is_active', models.BooleanField(db_index=True, default=True)),
                 ('carousel', models.IntegerField(choices=[(1, 'Primero'), (2, 'Segundo'), (3, 'Tercero')])),
                 ('position', models.IntegerField(choices=[(1, 'Primero'), (2, 'Segundo'), (3, 'Tercero'), (4, 'Cuarto'), (5, 'Quinto')])),
-                ('img', models.ImageField(upload_to=cms.utils.upload_image_carousel, validators=[cms.utils.validate_jpg])),
+                ('img', models.ImageField(upload_to=cms.utils.upload_image_carousel, validators=[cms.utils.validate_image_format])),
             ],
             options={
                 'verbose_name': 'Carrusel',

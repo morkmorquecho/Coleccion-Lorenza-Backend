@@ -11,9 +11,11 @@ def validate_year(value):
             f"El año debe ser mayor a 2020 y menor o igual a {current_year}."
         )
 
-def validate_jpg(image):
-    if not image.name.lower().endswith('.jpg'):
-        raise ValidationError('Solo se permiten archivos JPG.')
+ALLOWED_IMAGE_FORMATS = ('.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif')
+
+def validate_image_format(image):
+    if not image.name.lower().endswith(ALLOWED_IMAGE_FORMATS):
+        raise ValidationError(f'Formatos permitidos: {", ".join(ALLOWED_IMAGE_FORMATS)}')
 
 def upload_image_carousel(instance, filename):
     ext = os.path.splitext(filename)[1].lower()

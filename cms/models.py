@@ -3,7 +3,7 @@ from datetime import date
 from django.db import models
 from jsonschema import ValidationError
 
-from cms.utils import upload_image_carousel, upload_image_collection, validate_jpg, validate_year
+from cms.utils import upload_image_carousel, upload_image_collection, validate_image_format, validate_year
 from core.image_mixins import HEICConversionMixin
 from core.models import BaseModel
 
@@ -43,8 +43,8 @@ class Carousel(HEICConversionMixin, BaseModel):
 class Collection(HEICConversionMixin, BaseModel):
     name = models.CharField(max_length=150, unique=True)
     description = models.TextField(blank=True, null=True)
-    thumbnail_path = models.ImageField(upload_to=upload_image_collection)
     featured = models.BooleanField(default=False)
+    thumbnail_path = models.ImageField(upload_to=upload_image_collection, validators=[validate_image_format])
     
     heic_image_fields = ['thumbnail_path']
     

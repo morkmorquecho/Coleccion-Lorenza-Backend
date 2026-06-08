@@ -1,10 +1,11 @@
 from django.db import models
 from blog.utils import upload_image_blog
+from core.mixins import HEICConversionMixin
 from core.models import BaseModel
 from pieces.models import Piece, Section
 import uuid
 
-class Blog(BaseModel):
+class Blog(HEICConversionMixin, BaseModel):
     storage_id = models.UUIDField(default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True)
@@ -18,6 +19,9 @@ class Blog(BaseModel):
     )
     published_at = models.DateTimeField(null=True, blank=True)
     section = models.ForeignKey(Section, on_delete=models.CASCADE)
+    
+    heic_image_fields = ['cover_image']
+
 
     class Meta:
         verbose_name = 'Blog'

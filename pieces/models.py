@@ -4,6 +4,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.utils import timezone
+from core.mixins import HEICConversionMixin
 from core.models import BaseModel
 from core.utils.validations import validate_date_range
 from django.apps import apps
@@ -45,7 +46,7 @@ class Section(BaseModel):
         return f"{self.section} ({self.key})"
     
 
-class Piece( BaseModel):
+class Piece(HEICConversionMixin, BaseModel):
     thumbnail_path = models.ImageField(upload_to=upload_pieces_thumb)
     intro_video = models.FileField(upload_to=uplaod_intro_video, blank=True, null=True)
     title = models.CharField(max_length=100, unique=True)
@@ -65,6 +66,9 @@ class Piece( BaseModel):
 
     type = models.ForeignKey(TypePiece, on_delete=models.CASCADE, related_name="pieces")
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="pieces")
+    
+    heic_image_fields = ['thumbnail_path']
+
     class Meta:
         verbose_name = 'Pieza'
         verbose_name_plural = 'Piezas'
@@ -159,12 +163,15 @@ class PieceDiscount(BaseModel):
         return f"{self.piece.title} - {self.discount.percentage}%"
 
 
-class PiecePhoto( BaseModel):
+class PiecePhoto(HEICConversionMixin, BaseModel):
     piece = models.ForeignKey(Piece, on_delete=models.CASCADE, related_name="photos")
     image_path = models.ImageField(upload_to=upload_piece_image)
     position = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(10)]
     )
+    
+    heic_image_fields = ['image_path']
+
     
     class Meta:
         verbose_name = 'Foto de la pieza'
@@ -196,7 +203,7 @@ class ShippingRate(BaseModel):
     def __str__(self):
         return f"{self.region} - {self.kg}kg: ${self.cost}"
 
-class Review(BaseModel):
+class Review(HEICConversionMixin, BaseModel):
     class ReviewType(models.TextChoices):
         INTERNAL = 'internal', 'Reseña de usuario'
         EXTERNAL = 'external', 'Reseña externa (Etsy, etc.)'
@@ -228,6 +235,9 @@ class Review(BaseModel):
         validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
     created_at = models.DateTimeField(auto_now_add=True)  # recomendado
+
+    heic_image_fields = ['photo']
+
 
     class Meta:
         verbose_name = 'Reseña'

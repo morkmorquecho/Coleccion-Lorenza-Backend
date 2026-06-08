@@ -4,10 +4,11 @@ from django.db import models
 from jsonschema import ValidationError
 
 from cms.utils import upload_image_carousel, upload_image_collection, validate_jpg, validate_year
+from core.mixins import HEICConversionMixin
 from core.models import BaseModel
 
 
-class Carousel( BaseModel):
+class Carousel(HEICConversionMixin, BaseModel):
     CAROUSEL_CHOICES = [
         (1, 'Primero'),
         (2, 'Segundo'),
@@ -26,7 +27,9 @@ class Carousel( BaseModel):
     position = models.IntegerField(choices=POSITION_CHOICES)
     from django.core.exceptions import ValidationError
 
-    img = models.ImageField(upload_to=upload_image_carousel, validators=[validate_jpg])
+    img = models.ImageField(upload_to=upload_image_carousel)
+    
+    heic_image_fields = ['img']
 
     def __str__(self):
         return f"carousel:{self.carousel} - position:{self.position}"
@@ -37,11 +40,13 @@ class Carousel( BaseModel):
         verbose_name_plural = 'Carruseles'
 
 
-class Collection( BaseModel):
+class Collection(HEICConversionMixin, BaseModel):
     name = models.CharField(max_length=150, unique=True)
     description = models.TextField(blank=True, null=True)
     thumbnail_path = models.ImageField(upload_to=upload_image_collection)
     featured = models.BooleanField(default=False)
+    
+    heic_image_fields = ['thumbnail_path']
     
     def __str__(self):
         return self.name
@@ -63,7 +68,7 @@ class Collection( BaseModel):
 
 
 
-class ImageCollection( BaseModel):
+class ImageCollection(HEICConversionMixin, BaseModel):
     collection = models.ForeignKey(
         Collection,
         on_delete=models.CASCADE,
@@ -73,6 +78,8 @@ class ImageCollection( BaseModel):
     year = models.PositiveSmallIntegerField(validators=[validate_year])
     name = models.CharField(max_length=150)
 
+    heic_image_fields = ['image_path']
+    
     def __str__(self):
         return f"{self.name} ({self.year}) - {self.collection.name}"
     

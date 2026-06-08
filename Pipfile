@@ -33,6 +33,7 @@ django-modeltranslation = "*"
 gunicorn = "*"
 whitenoise = "*"
 resend = "*"
+pillow-heif = "*"
 
 [dev-packages]
 

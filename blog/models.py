@@ -1,6 +1,6 @@
 from django.db import models
 from blog.utils import upload_image_blog
-from core.mixins import HEICConversionMixin
+from core.image_mixins import HEICConversionMixin
 from core.models import BaseModel
 from pieces.models import Piece, Section
 import uuid

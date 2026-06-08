@@ -8,3 +8,6 @@ class CmsConfig(AppConfig):
 
     def ready(self):
         import cms.signals    
+        import pillow_heif
+        pillow_heif.register_heif_opener()
+        

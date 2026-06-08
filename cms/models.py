@@ -4,7 +4,7 @@ from django.db import models
 from jsonschema import ValidationError
 
 from cms.utils import upload_image_carousel, upload_image_collection, validate_jpg, validate_year
-from core.mixins import HEICConversionMixin
+from core.image_mixins import HEICConversionMixin
 from core.models import BaseModel
 
 

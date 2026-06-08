@@ -4,7 +4,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.utils import timezone
-from core.mixins import HEICConversionMixin
+from core.image_mixins import HEICConversionMixin
 from core.models import BaseModel
 from core.utils.validations import validate_date_range
 from django.apps import apps

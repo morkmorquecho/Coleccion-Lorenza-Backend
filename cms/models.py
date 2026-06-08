@@ -75,8 +75,8 @@ class ImageCollection(HEICConversionMixin, BaseModel):
         related_name='images'
     )
     image_path = models.ImageField(upload_to=upload_image_collection)
-    year = models.PositiveSmallIntegerField(validators=[validate_year])
-    name = models.CharField(max_length=150)
+    year = models.PositiveSmallIntegerField(validators=[validate_year], blank=True, null=True)
+    name = models.CharField(max_length=150, blank=True, null=True)
 
     heic_image_fields = ['image_path']
     

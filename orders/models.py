@@ -49,6 +49,7 @@ class Order(BaseModel):
         ('pending', 'Pending'),
         ('paid', 'Paid'),
         ('cancelled', 'Cancelled'),
+        ('expired', 'Expired')
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     total = models.DecimalField(max_digits=10, decimal_places=2)

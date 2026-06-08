@@ -570,6 +570,7 @@ if not config('DEBUG', default=True, cast=bool):
     sentry_sdk.init(
         dsn=config('SDK_SENTRY', default=None),
         send_default_pii=True,
+        traces_sample_rate=1.0,
     )
 
 

@@ -56,12 +56,31 @@ class CouponAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
         "percentage",
         "valid_from",
         "valid_until",
+        "max_uses",
+        "used_count",
+        "is_currently_valid",
         "created_at",
     )
+
     search_fields = ("code",)
-    list_filter = ("valid_from", "valid_until")
+
+    list_filter = (
+        "is_active",
+        "valid_from",
+        "valid_until",
+    )
+
     ordering = ("-created_at",)
 
+    readonly_fields = ("used_count",)
+
+    @admin.display(description="Usos")
+    def used_count(self, obj):
+        return obj.usages.count()
+
+    @admin.display(boolean=True, description="Vigente")
+    def is_currently_valid(self, obj):
+        return obj.is_valid() and obj.has_uses_remaining()
 
 @admin.register(Order)
 class OrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):

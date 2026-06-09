@@ -5,7 +5,8 @@ from cms.filter import CollectionFilter
 from cms.serializers import CollectionDetailSerializer, CollectionListSerializer
 from .models import Collection
 from django_filters.rest_framework import DjangoFilterBackend
-
+from django.db.models import Prefetch
+from .models import Collection, ImageCollection
 
 class CollectionViewSet(mixins.ListModelMixin,
                         mixins.RetrieveModelMixin,
@@ -22,5 +23,7 @@ class CollectionViewSet(mixins.ListModelMixin,
 
     def get_queryset(self):
         if self.action == 'retrieve':
-            return Collection.objects.prefetch_related('images').all()
+            return Collection.objects.prefetch_related(
+                Prefetch('images', queryset=ImageCollection.objects.order_by('-year'))
+            ).all()
         return Collection.objects.all()

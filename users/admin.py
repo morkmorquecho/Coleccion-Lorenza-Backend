@@ -2,7 +2,7 @@ from pyexpat.errors import messages
 
 from django.contrib import admin
 from core.mixins import SoftDeleteAdminMixin
-from .models import Address
+from .models import Address, WishList
 from django.contrib.auth.admin import UserAdmin
 
 from django.contrib.auth import get_user_model
@@ -56,4 +56,39 @@ class CustomUserAdmin(UserAdmin):
         "is_active",
         "last_login",
         "date_joined",
+    )
+
+@admin.register(WishList)
+class WishListAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'user',
+        'piece',
+        'is_active',
+        'created_at',
+        'updated_at',
+    )
+
+    list_filter = (
+        'is_active',
+        'created_at',
+        'updated_at',
+    )
+
+    search_fields = (
+        'user__username',
+        'user__email',
+        'piece__title',
+    )
+
+    readonly_fields = (
+        'created_at',
+        'updated_at',
+    )
+
+    ordering = ('-created_at',)
+
+    autocomplete_fields = (
+        'user',
+        'piece',
     )

@@ -8,6 +8,7 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from pieces.service import CurrencyService
 from pieces.utils import COUNTRY_MAP
+from users.models import WishList
 class TypePieceSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
     type = serializers.SerializerMethodField()
 
@@ -31,6 +32,7 @@ class SectionSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
 class PieceSerializer(TranslatedFieldsMixin, CurrencyMixin, serializers.ModelSerializer):
     type = serializers.SlugRelatedField(slug_field='type', read_only=True)
     section = serializers.SlugRelatedField(slug_field='section', read_only=True)
+    wishlist_detail = serializers.SerializerMethodField()
 
     # Campos calculados
     has_discount = serializers.SerializerMethodField()
@@ -59,6 +61,7 @@ class PieceSerializer(TranslatedFieldsMixin, CurrencyMixin, serializers.ModelSer
             "type",       
             "section",    
             "created_at",
+            "wishlist_detail",
             
             # calculados
             "has_discount",
@@ -102,6 +105,15 @@ class PieceSerializer(TranslatedFieldsMixin, CurrencyMixin, serializers.ModelSer
     def get_discount_percentage(self, obj) -> float | None:
         discount = obj.get_active_discount()
         return discount.percentage if discount else None
+    
+    def get_wishlist_detail(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        wishlist = WishList.objects.filter(user=request.user, piece=obj).first()
+        if not wishlist:
+            return None
+        return WishListSerializerDetail(wishlist).data
     
 class PiecePhotoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -199,3 +211,8 @@ class PiecePublicSerializer(TranslatedFieldsMixin, serializers.ModelSerializer):
 
     def get_title(self, obj):
         return self.get_translated(obj, 'title')
+    
+class WishListSerializerDetail(serializers.ModelSerializer):
+    class Meta:
+        model = WishList
+        fields = ['id', 'is_active']

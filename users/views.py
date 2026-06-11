@@ -92,22 +92,11 @@ class WishListViewSet(ViewSetSentryMixin, viewsets.ModelViewSet):
         ).select_related('piece')
 
     def perform_create(self, serializer):
-        piece = serializer.validated_data['piece']
-        
-        existing = WishList.objects.filter(
-            user=self.request.user,
-            piece=piece,
-            is_active = False,
-        ).first()
+        serializer.save()
 
-        if existing:
-            existing.is_active = True
-            existing.save(update_fields=['is_active'])
-        else:
-            serializer.save(user=self.request.user, is_active=True)
 
     def destroy(self, request, pk=None):
-        wishlist_item = get_object_or_404(WishList, user=request.user, piece_id=pk)
+        wishlist_item = get_object_or_404(WishList, user=request.user, id=pk)
         wishlist_item.is_active = False
         wishlist_item.save(update_fields=['is_active'])
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -144,6 +144,9 @@ class ErrorMessages:
         FILE_TOO_LARGE = "El archivo excede el tamaño permitido."
         INVALID_FILE_TYPE = "Tipo de archivo no permitido."
 
+    class WishList:
+        ALREADY_EXIST = "ya existe"
+
 
 
 

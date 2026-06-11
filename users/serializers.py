@@ -76,7 +76,6 @@ class AddressSerializer(serializers.ModelSerializer):
             Address.objects.filter(user=user, is_default=True).exclude(pk=instance.pk).update(is_default=False)
         return super().update(instance, validated_data)
     
-# serializers.py
 class WishListSerializer(serializers.ModelSerializer):
     piece = PieceSerializer(read_only=True)        
     piece_id = serializers.PrimaryKeyRelatedField(  
@@ -84,21 +83,25 @@ class WishListSerializer(serializers.ModelSerializer):
         source='piece',
         write_only=True
     )
-    
 
     class Meta:
         model = WishList
         fields = ['id', 'piece', 'piece_id', 'is_active']
 
     def validate(self, attrs):
-        user = self.context['request'].user
-        piece = attrs['piece']
-
-        if WishList.objects.filter(user=user, piece=piece, is_active=True).exists():
-            raise serializers.ValidationError(ErrorMessages.WishList.ALREADY_EXIST)
-
+        # Ya no bloqueamos aquí, lo manejamos en create
         return attrs
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        user = self.context['request'].user
+        piece = validated_data['piece']
+
+        existing = WishList.objects.filter(user=user, piece=piece).first()
+
+        if existing:
+            existing.is_active = True
+            existing.save(update_fields=['is_active'])
+            return existing
+
+        validated_data['user'] = user
         return super().create(validated_data)

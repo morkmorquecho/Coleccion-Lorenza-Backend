@@ -41,3 +41,4 @@ Thumbs.db
 
 env.prod
 env_dev
+users/views.py

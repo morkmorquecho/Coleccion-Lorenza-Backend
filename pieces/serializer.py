@@ -110,11 +110,15 @@ class PieceSerializer(TranslatedFieldsMixin, CurrencyMixin, serializers.ModelSer
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return None
-        wishlist = WishList.objects.filter(user=request.user, piece=obj).first()
+        wishlist = WishList.objects.filter(
+            user=request.user, 
+            piece=obj,
+            is_active=True 
+        ).first()
         if not wishlist:
             return None
         return WishListSerializerDetail(wishlist).data
-    
+        
 class PiecePhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = PiecePhoto

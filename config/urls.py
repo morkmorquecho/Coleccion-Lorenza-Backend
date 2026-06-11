@@ -22,6 +22,8 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView
 )
+from django.contrib.admin.views.decorators import staff_member_required
+from django.utils.decorators import method_decorator
 from users.urls import users_patterns
 from pieces.urls import pieces_patterns
 from orders.urls import orders_patterns
@@ -30,6 +32,10 @@ from cms.urls import cms_patterns
 
 def trigger_error(request):
     division_by_zero = 1 / 0
+    
+schema_view = method_decorator(staff_member_required, name='dispatch')(SpectacularAPIView)
+swagger_view = method_decorator(staff_member_required, name='dispatch')(SpectacularSwaggerView)
+redoc_view = method_decorator(staff_member_required, name='dispatch')(SpectacularRedocView)
 
 api_v1_patterns = [
     path('auth/', include(authentications_patterns)),
@@ -44,9 +50,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('sentry-debug/', trigger_error),
     path('api/v1/', include(api_v1_patterns)),
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path('api/schema/', schema_view.as_view(), name='schema'),
+    path('api/docs/', swagger_view.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', redoc_view.as_view(url_name='schema'), name='redoc'),
     path("accounts/", include("allauth.urls")),
 ]
 
